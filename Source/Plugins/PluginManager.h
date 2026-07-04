@@ -10,8 +10,11 @@ namespace fable
 //
 // - Scans the platform's default VST3 folders plus any user-added folders,
 //   on a background thread.
-// - A "dead man's pedal" file records the plugin currently being probed; if a
-//   plugin crashes the app during a scan, it is blacklisted on the next run.
+// - Discovery is out-of-process: each candidate plugin is probed by launching
+//   this same executable as a child process (see Source/Main.cpp's
+//   "--scan-plugin" mode). A crashing or hanging plugin only takes down that
+//   throwaway child - the running DAW keeps going - and the offending file is
+//   blacklisted so it's skipped on future scans.
 // - The discovered plugin list and settings persist in the user app-data dir.
 
 class PluginManager : private juce::Thread
@@ -30,7 +33,7 @@ public:
 
     void  startScan();
     void  stopScan();
-    void  scanSynchronously();   // blocking scan on the calling thread (headless tools)
+    void  scanSynchronously();   // blocking, in-process scan (headless tools / CI only)
     bool  isScanning() const        { return isThreadRunning(); }
     float getScanProgress() const   { return scanProgress.load(); }
     juce::String getCurrentlyScannedPlugin() const;
@@ -49,15 +52,25 @@ public:
     juce::Array<juce::PluginDescription> getInstruments() const;
     juce::Array<juce::PluginDescription> getEffects() const;
 
+    // Entry point for the "--scan-plugin <file> --out <resultFile>" child process
+    // mode (invoked from Main.cpp before any window/audio device is created).
+    // Probes one plugin file in this process and writes descriptions as XML.
+    static void runScanChildProcess (const juce::File& pluginFile, const juce::File& outFile);
+
 private:
     void run() override;
     void saveList();
     void loadList();
+    void loadBlacklist();
+    void saveBlacklist();
+    juce::Array<juce::File> findCandidateFiles() const;
+    bool probeOneFile (const juce::File& file);   // false if crashed/timed out/blacklisted
 
     juce::File settingsFile()  const { return getAppDataDir().getChildFile ("plugins.xml"); }
-    juce::File deadMansFile()  const { return getAppDataDir().getChildFile ("scan-in-progress.txt"); }
+    juce::File blacklistFile() const { return getAppDataDir().getChildFile ("plugin-blacklist.txt"); }
 
     juce::StringArray userFolders;
+    juce::StringArray blacklistedFiles;
     std::atomic<float> scanProgress { 0.0f };
     juce::CriticalSection scanNameLock;
     juce::String currentScanName;

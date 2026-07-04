@@ -3,10 +3,38 @@
 namespace fable
 {
 
+namespace
+{
+    // How long a single plugin gets to answer a probe before we assume it's
+    // hung and kill the child. Some plugins (samplers with big libraries) are
+    // legitimately slow to load the first time, so this is generous.
+    constexpr int kProbeTimeoutMs = 20000;
+
+    void findVst3Candidates (const juce::File& dir, juce::Array<juce::File>& results, int depth)
+    {
+        if (depth > 8 || ! dir.isDirectory())
+            return;
+
+        for (const auto& entry : juce::RangedDirectoryIterator (dir, false, "*",
+                                                                 juce::File::findFilesAndDirectories))
+        {
+            auto f = entry.getFile();
+            if (f.hasFileExtension ("vst3"))
+            {
+                results.add (f);
+                continue;   // a .vst3 bundle's insides aren't further candidates
+            }
+            if (f.isDirectory())
+                findVst3Candidates (f, results, depth + 1);
+        }
+    }
+}
+
 PluginManager::PluginManager() : juce::Thread ("VST3 Scanner")
 {
     formatManager.addFormat (new juce::VST3PluginFormat());
     loadList();
+    loadBlacklist();
 
     knownPlugins.addChangeListener (nullptr);   // no-op; changes handled via callbacks below
 }
@@ -54,14 +82,22 @@ void PluginManager::stopScan()
 
 void PluginManager::scanSynchronously()
 {
+    // Simple in-process scan used only by headless tools/CI, where the plugin
+    // under test (our own FableTestTone) is known-safe. The real app always
+    // goes through the out-of-process run() below.
     auto* format = formatManager.getFormat (0);
     if (format == nullptr)
         return;
 
-    juce::PluginDirectoryScanner scanner (knownPlugins, *format, getSearchPath(),
-                                          true, deadMansFile(), false);
-    juce::String pluginBeingScanned;
-    while (scanner.scanNextFile (true, pluginBeingScanned)) {}
+    for (auto& file : findCandidateFiles())
+    {
+        if (knownPlugins.getTypeForFile (file.getFullPathName()) != nullptr)
+            continue;
+        juce::OwnedArray<juce::PluginDescription> found;
+        format->findAllTypesForFile (found, file.getFullPathName());
+        for (auto* d : found)
+            knownPlugins.addType (*d);
+    }
     saveList();
 }
 
@@ -71,29 +107,87 @@ juce::String PluginManager::getCurrentlyScannedPlugin() const
     return currentScanName;
 }
 
+juce::Array<juce::File> PluginManager::findCandidateFiles() const
+{
+    juce::Array<juce::File> results;
+    auto path = getSearchPath();
+    for (int i = 0; i < path.getNumPaths(); ++i)
+        findVst3Candidates (path[i], results, 0);
+    return results;
+}
+
+bool PluginManager::probeOneFile (const juce::File& file)
+{
+    if (blacklistedFiles.contains (file.getFullPathName()))
+        return false;
+
+    const auto resultFile = getAppDataDir().getChildFile ("scan-result-"
+        + juce::String::toHexString (juce::Random::getSystemRandom().nextInt64()) + ".xml");
+    resultFile.deleteFile();
+
+    juce::ChildProcess child;
+    juce::StringArray args;
+    args.add (juce::File::getSpecialLocation (juce::File::currentExecutableFile).getFullPathName());
+    args.add ("--scan-plugin");
+    args.add (file.getFullPathName());
+    args.add ("--out");
+    args.add (resultFile.getFullPathName());
+
+    bool ok = false;
+    if (child.start (args))
+    {
+        if (child.waitForProcessToFinish (kProbeTimeoutMs) && resultFile.existsAsFile())
+        {
+            if (auto xml = juce::parseXML (resultFile))
+            {
+                for (auto* d : xml->getChildIterator())
+                {
+                    juce::PluginDescription desc;
+                    if (desc.loadFromXml (*d))
+                    {
+                        knownPlugins.addType (desc);
+                        ok = true;
+                    }
+                }
+            }
+        }
+        else
+        {
+            child.kill();   // hung - don't let it linger as a zombie
+        }
+    }
+
+    resultFile.deleteFile();
+
+    if (! ok)
+    {
+        blacklistedFiles.addIfNotAlreadyThere (file.getFullPathName());
+        saveBlacklist();
+    }
+    return ok;
+}
+
 void PluginManager::run()
 {
-    auto* format = formatManager.getFormat (0);
-    if (format == nullptr)
-        return;
+    const auto candidates = findCandidateFiles();
+    const int total = juce::jmax (1, candidates.size());
 
-    // Plugins listed in the dead-man's file crashed a previous scan: skip them.
-    juce::PluginDirectoryScanner scanner (knownPlugins, *format, getSearchPath(),
-                                          true /*recursive*/, deadMansFile(),
-                                          false /*allowAsync*/);
-
-    juce::String pluginBeingScanned;
-    while (! threadShouldExit())
+    for (int i = 0; i < candidates.size(); ++i)
     {
-        {
-            const juce::ScopedLock sl (scanNameLock);
-            currentScanName = scanner.getNextPluginFileThatWillBeScanned();
-        }
-
-        if (! scanner.scanNextFile (true /*dontRescanIfAlreadyInList*/, pluginBeingScanned))
+        if (threadShouldExit())
             break;
 
-        scanProgress.store (scanner.getProgress());
+        const auto& file = candidates.getReference (i);
+        {
+            const juce::ScopedLock sl (scanNameLock);
+            currentScanName = file.getFullPathName();
+        }
+
+        // Skip files already known and unchanged, and previously-blacklisted ones.
+        if (knownPlugins.getTypeForFile (file.getFullPathName()) == nullptr)
+            probeOneFile (file);
+
+        scanProgress.store ((float) (i + 1) / (float) total);
     }
 
     scanProgress.store (1.0f);
@@ -138,6 +232,18 @@ void PluginManager::loadList()
             userFolders.add (f->getStringAttribute ("path"));
 }
 
+void PluginManager::loadBlacklist()
+{
+    auto file = blacklistFile();
+    if (file.existsAsFile())
+        blacklistedFiles = juce::StringArray::fromLines (file.loadFileAsString());
+}
+
+void PluginManager::saveBlacklist()
+{
+    blacklistFile().replaceWithText (blacklistedFiles.joinIntoString ("\n"));
+}
+
 std::unique_ptr<juce::AudioPluginInstance>
 PluginManager::createInstance (const juce::PluginDescription& desc,
                                double sampleRate, int blockSize, juce::String& errorOut)
@@ -170,6 +276,18 @@ juce::Array<juce::PluginDescription> PluginManager::getEffects() const
         if (! d.isInstrument)
             out.add (d);
     return out;
+}
+
+void PluginManager::runScanChildProcess (const juce::File& pluginFile, const juce::File& outFile)
+{
+    juce::VST3PluginFormat format;
+    juce::OwnedArray<juce::PluginDescription> found;
+    format.findAllTypesForFile (found, pluginFile.getFullPathName());
+
+    auto root = std::make_unique<juce::XmlElement> ("SCAN_RESULT");
+    for (auto* d : found)
+        root->addChildElement (d->createXml().release());
+    root->writeTo (outFile);
 }
 
 } // namespace fable

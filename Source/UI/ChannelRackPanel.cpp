@@ -15,6 +15,32 @@ static juce::File audioFileFromDragDescription (const juce::var& description)
     return juce::File (text.fromFirstOccurrenceOf ("audiofile:", false, false));
 }
 
+// Child controls (button/sliders) sit on top of the row and would otherwise
+// swallow a right-click before it ever reaches ChannelRow::mouseDown, so
+// right-clicking the channel appeared to do nothing. These forward it back.
+class RightClickButton : public juce::TextButton
+{
+public:
+    using juce::TextButton::TextButton;
+    std::function<void()> onRightClick;
+    void mouseDown (const juce::MouseEvent& e) override
+    {
+        if (e.mods.isPopupMenu()) { if (onRightClick) onRightClick(); return; }
+        juce::TextButton::mouseDown (e);
+    }
+};
+
+class RightClickSlider : public juce::Slider
+{
+public:
+    std::function<void()> onRightClick;
+    void mouseDown (const juce::MouseEvent& e) override
+    {
+        if (e.mods.isPopupMenu()) { if (onRightClick) onRightClick(); return; }
+        juce::Slider::mouseDown (e);
+    }
+};
+
 // ------------------------------------------------------------------ row
 
 class ChannelRackPanel::ChannelRow : public juce::Component
@@ -36,6 +62,7 @@ public:
                 updateLedColour();
             }
         };
+        muteLed.onRightClick = [this] { channelMenu(); };
         addAndMakeVisible (muteLed);
         updateLedColour();
 
@@ -59,6 +86,8 @@ public:
             }
         });
         panKnob.setDoubleClickReturnValue (true, 0.0);
+        panKnob.onRightClick = [this] { channelMenu(); };
+        volKnob.onRightClick = [this] { channelMenu(); };
         setupKnob (volKnob, channel->volume, { 0.0, 1.0 }, [this] (float v)
         {
             if (auto* c = context.project.channelById (channelId))
@@ -79,6 +108,7 @@ public:
             juce::Timer::callAfterDelay (220, [ctx = &context, id = channelId, pitch = rootNoteOf()]
                                          { ctx->engine.auditionNoteOff (id, pitch); });
         };
+        nameButton.onRightClick = [this] { channelMenu(); };
         addAndMakeVisible (nameButton);
     }
 
@@ -315,9 +345,9 @@ public:
     const int channelId;
     ChannelRackPanel& owner;
 
-    juce::TextButton muteLed { "" };
-    juce::Slider panKnob, volKnob;
-    juce::TextButton nameButton;
+    RightClickButton muteLed { "" };
+    RightClickSlider panKnob, volKnob;
+    RightClickButton nameButton;
     std::unique_ptr<juce::FileChooser> chooser;
 };
 

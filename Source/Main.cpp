@@ -1,5 +1,6 @@
 #include <juce_gui_extra/juce_gui_extra.h>
 
+#include "Plugins/PluginManager.h"
 #include "UI/MainComponent.h"
 
 namespace fable
@@ -14,6 +15,25 @@ public:
 
     void initialise (const juce::String&) override
     {
+        // Sandboxed VST3 probe mode: this same executable is relaunched as a
+        // disposable child process (see PluginManager::probeOneFile) to query
+        // one plugin's descriptions. If the plugin crashes, only this child
+        // dies - the real running DAW is never touched. No window/audio
+        // device is created; it exits as soon as the probe is done.
+        {
+            const auto params = getCommandLineParameterArray();
+            const int scanIndex = params.indexOf ("--scan-plugin");
+            const int outIndex  = params.indexOf ("--out");
+            if (scanIndex >= 0 && outIndex >= 0
+                && scanIndex + 1 < params.size() && outIndex + 1 < params.size())
+            {
+                PluginManager::runScanChildProcess (juce::File (params[scanIndex + 1]),
+                                                    juce::File (params[outIndex + 1]));
+                quit();
+                return;
+            }
+        }
+
         mainWindow = std::make_unique<MainWindow> (getApplicationName());
 
         // Headless UI verification: --screenshot <dir> captures each panel

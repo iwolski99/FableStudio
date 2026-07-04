@@ -27,6 +27,15 @@ MainComponent::MainComponent()
         pianoRollPanel.toFrontAndShow();
     };
     context.showStatusMessage = [this] (const juce::String& message) { showStatus (message); };
+    context.plugins.onListChanged = [this]
+    {
+        context.structureBroadcaster.sendChangeMessage();
+    };
+    context.plugins.onScanFinished = [this]
+    {
+        showStatus ("VST3 scan complete: " + juce::String (context.plugins.knownPlugins.getNumTypes())
+                   + " plugin(s) found");
+    };
 
     menuBar.setModel (this);
     addAndMakeVisible (menuBar);
