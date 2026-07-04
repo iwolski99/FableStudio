@@ -28,12 +28,13 @@ private:
     void changeListenerCallback (juce::ChangeBroadcaster*) override;
     void timerCallback() override;
     void refreshHeader();
+    bool isPitchInHighlightedScale (int pitch) const;
 
     std::vector<Note>* currentNotes();
     Pattern* currentPattern() { return context.selectedPattern(); }
 
     AppContext& context;
-    juce::ComboBox channelBox, snapBox;
+    juce::ComboBox channelBox, snapBox, keyBox, scaleBox;
     juce::Label hintLabel;
     juce::Viewport viewport;
     std::unique_ptr<NoteGrid> grid;

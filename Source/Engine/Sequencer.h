@@ -39,6 +39,7 @@ struct CompiledClip
 struct CompiledAudioClip
 {
     juce::String name, filePath;
+    float gain = 1.0f;
     int startTick = 0, lengthTicks = 0, track = 0, mixerTrack = 0;
     int sourceOffsetTicks = 0;
     bool muted = false;

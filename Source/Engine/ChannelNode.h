@@ -21,7 +21,8 @@ public:
 
     // --- message thread ------------------------------------------------
     void setSynthGenerator();
-    void setSamplerGenerator (juce::AudioBuffer<float>&& sample, double sourceRate, int rootNote);
+    void setSamplerGenerator (juce::AudioBuffer<float>&& sample, double sourceRate, int rootNote,
+                              float fadeInMs, float fadeOutMs);
     void setPluginGenerator (std::unique_ptr<juce::AudioPluginInstance> instance);
 
     void prepare (double sampleRate, int maxBlockSize);

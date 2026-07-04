@@ -17,6 +17,11 @@ static double xToTick (int x)        { return juce::jmax (0.0, (x - kKeyWidth) /
 static int   pitchToY (int pitch)    { return (kHighNote - pitch) * kNoteHeight; }
 static int   yToPitch (int y)        { return juce::jlimit (0, 127, kHighNote - y / kNoteHeight); }
 
+static const char* const kKeyNames[12] =
+{
+    "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"
+};
+
 // ------------------------------------------------------------------ grid
 
 class PianoRollPanel::NoteGrid : public juce::Component
@@ -61,6 +66,11 @@ public:
                             || semitone == 8 || semitone == 10;
             g.setColour (black ? colours::panelDark.darker (0.25f) : colours::panelDark);
             g.fillRect (kKeyWidth, y, getWidth() - kKeyWidth, kNoteHeight);
+            if (owner.isPitchInHighlightedScale (pitch))
+            {
+                g.setColour (colours::accent.withAlpha (black ? 0.12f : 0.08f));
+                g.fillRect (kKeyWidth, y, getWidth() - kKeyWidth, kNoteHeight);
+            }
             if (semitone == 0)
             {
                 g.setColour (colours::outline.brighter (0.15f));
@@ -238,6 +248,9 @@ public:
             return;
         }
 
+        draggingSelectionGroup = false;
+        dragGroupSnapshot.clear();
+
         if (draggedIndex < 0)
         {
             // create a note at the snapped position
@@ -257,8 +270,20 @@ public:
         }
         else
         {
+            if (! selectedNotes.empty() && selectedNotes.count (draggedIndex) == 0)
+                selectedNotes.clear();
             resizing = onEdge;
             dragOffsetTicks = (int) xToTick (e.getPosition().x) - (*notes)[(size_t) draggedIndex].startTick;
+
+            if (! resizing && selectedNotes.count (draggedIndex) > 0 && selectedNotes.size() > 1)
+            {
+                draggingSelectionGroup = true;
+                dragGroupLeadStartTick = (*notes)[(size_t) draggedIndex].startTick;
+                dragGroupLeadPitch = (*notes)[(size_t) draggedIndex].pitch;
+                for (int i : selectedNotes)
+                    if (i >= 0 && i < (int) notes->size())
+                        dragGroupSnapshot.push_back ({ i, (*notes)[(size_t) i] });
+            }
         }
     }
 
@@ -298,14 +323,44 @@ public:
             const int newStart = juce::jmax (0, ((((int) xToTick (e.getPosition().x) - dragOffsetTicks)
                                                   + snap / 2) / snap) * snap);
             const int newPitch = yToPitch (e.getPosition().y);
-            if (newPitch != n.pitch && previewPitch >= 0)
+            if (draggingSelectionGroup)
             {
-                owner.context.engine.auditionNoteOff (owner.context.selectedChannelId, previewPitch);
-                owner.context.engine.auditionNoteOn (owner.context.selectedChannelId, newPitch, n.velocity);
-                previewPitch = newPitch;
+                int minStart = std::numeric_limits<int>::max();
+                int minPitch = 127, maxPitch = 0;
+                for (auto& entry : dragGroupSnapshot)
+                {
+                    minStart = juce::jmin (minStart, entry.second.startTick);
+                    minPitch = juce::jmin (minPitch, entry.second.pitch);
+                    maxPitch = juce::jmax (maxPitch, entry.second.pitch);
+                }
+
+                int tickDelta = newStart - dragGroupLeadStartTick;
+                tickDelta = juce::jmax (tickDelta, -minStart);
+
+                int pitchDelta = newPitch - dragGroupLeadPitch;
+                if (minPitch + pitchDelta < 0)
+                    pitchDelta = -minPitch;
+                if (maxPitch + pitchDelta > 127)
+                    pitchDelta = 127 - maxPitch;
+
+                for (auto& entry : dragGroupSnapshot)
+                    if (entry.first >= 0 && entry.first < (int) notes->size())
+                    {
+                        (*notes)[(size_t) entry.first].startTick = entry.second.startTick + tickDelta;
+                        (*notes)[(size_t) entry.first].pitch     = entry.second.pitch + pitchDelta;
+                    }
             }
-            n.startTick = newStart;
-            n.pitch     = newPitch;
+            else
+            {
+                if (newPitch != n.pitch && previewPitch >= 0)
+                {
+                    owner.context.engine.auditionNoteOff (owner.context.selectedChannelId, previewPitch);
+                    owner.context.engine.auditionNoteOn (owner.context.selectedChannelId, newPitch, n.velocity);
+                    previewPitch = newPitch;
+                }
+                n.startTick = newStart;
+                n.pitch     = newPitch;
+            }
         }
         changedWhileDragging = true;
         repaint();
@@ -334,6 +389,8 @@ public:
             owner.grid->updateSize();
         }
         draggedIndex = -1;
+        draggingSelectionGroup = false;
+        dragGroupSnapshot.clear();
     }
 
     void mouseDoubleClick (const juce::MouseEvent& e) override
@@ -406,6 +463,21 @@ public:
         if (key == juce::KeyPress ('d', juce::ModifierKeys::ctrlModifier, 0))
         {
             cloneSelectedOrHovered();
+            return true;
+        }
+        if (key == juce::KeyPress ('c', juce::ModifierKeys::ctrlModifier, 0))
+        {
+            copySelectedOrHovered();
+            return true;
+        }
+        if (key == juce::KeyPress ('x', juce::ModifierKeys::ctrlModifier, 0))
+        {
+            cutSelectedOrHovered();
+            return true;
+        }
+        if (key == juce::KeyPress ('v', juce::ModifierKeys::ctrlModifier, 0))
+        {
+            pasteClipboard();
             return true;
         }
 
@@ -490,6 +562,96 @@ public:
         repaint();
     }
 
+    std::vector<int> selectedOrHoveredIndices()
+    {
+        if (! selectedNotes.empty())
+            return { selectedNotes.begin(), selectedNotes.end() };
+
+        bool onEdge = false;
+        const int index = noteIndexAt (lastMousePos, onEdge);
+        if (index >= 0)
+            return { index };
+        return {};
+    }
+
+    void copySelectedOrHovered()
+    {
+        auto* notes = owner.currentNotes();
+        if (notes == nullptr)
+            return;
+
+        const auto indices = selectedOrHoveredIndices();
+        if (indices.empty())
+            return;
+
+        owner.context.noteClipboard.clear();
+        owner.context.noteClipboardMinStart = std::numeric_limits<int>::max();
+        owner.context.noteClipboardBasePitch = 127;
+
+        for (int i : indices)
+        {
+            const auto& note = (*notes)[(size_t) i];
+            owner.context.noteClipboard.push_back (note);
+            owner.context.noteClipboardMinStart = juce::jmin (owner.context.noteClipboardMinStart, note.startTick);
+            owner.context.noteClipboardBasePitch = juce::jmin (owner.context.noteClipboardBasePitch, note.pitch);
+        }
+
+        for (auto& note : owner.context.noteClipboard)
+            note.startTick -= owner.context.noteClipboardMinStart;
+    }
+
+    void cutSelectedOrHovered()
+    {
+        copySelectedOrHovered();
+
+        auto* notes = owner.currentNotes();
+        if (notes == nullptr)
+            return;
+
+        auto indices = selectedOrHoveredIndices();
+        if (indices.empty())
+            return;
+
+        std::sort (indices.begin(), indices.end(), std::greater<int>());
+        for (int i : indices)
+            if (i >= 0 && i < (int) notes->size())
+                notes->erase (notes->begin() + i);
+
+        selectedNotes.clear();
+        owner.context.contentChanged();
+        repaint();
+        repaintVelocityLane();
+    }
+
+    void pasteClipboard()
+    {
+        auto* notes = owner.currentNotes();
+        if (notes == nullptr || owner.context.noteClipboard.empty())
+            return;
+
+        const int snap = snapTicks();
+        const bool mouseInGrid = lastMousePos.x >= kKeyWidth;
+        const int anchorTick = mouseInGrid
+            ? (((int) xToTick (lastMousePos.x) + snap / 2) / snap) * snap
+            : owner.context.noteClipboardMinStart;
+        const int anchorPitch = mouseInGrid ? yToPitch (lastMousePos.y) : owner.context.noteClipboardBasePitch;
+        const int pitchDelta = anchorPitch - owner.context.noteClipboardBasePitch;
+
+        selectedNotes.clear();
+        for (auto note : owner.context.noteClipboard)
+        {
+            note.startTick = juce::jmax (0, anchorTick + note.startTick);
+            note.pitch = juce::jlimit (0, 127, note.pitch + pitchDelta);
+            notes->push_back (note);
+            selectedNotes.insert ((int) notes->size() - 1);
+        }
+
+        owner.context.contentChanged();
+        updateSize();
+        repaint();
+        repaintVelocityLane();
+    }
+
     PianoRollPanel& owner;
     int draggedIndex = -1;
     int dragOffsetTicks = 0;
@@ -504,6 +666,10 @@ public:
     juce::Point<int> selectionStart;
     juce::Rectangle<int> selectionRect;
     std::set<int> selectedNotes;
+    bool draggingSelectionGroup = false;
+    int dragGroupLeadStartTick = 0;
+    int dragGroupLeadPitch = kDefaultRootNote;
+    std::vector<std::pair<int, Note>> dragGroupSnapshot;
 
 private:
     void deleteNoteAt (juce::Point<int> pos)
@@ -620,8 +786,23 @@ PianoRollPanel::PianoRollPanel (AppContext& ctx) : context (ctx)
     snapBox.setSelectedId (kTicksPerStep, juce::dontSendNotification);
     addAndMakeVisible (snapBox);
 
-    hintLabel.setText ("draw: left-click   delete: right-click/Del   resize: drag right edge   "
-                       "Up/Down: transpose (Shift=octave)   Ctrl+drag: select   Ctrl+D: clone",
+    for (int i = 0; i < 12; ++i)
+        keyBox.addItem (kKeyNames[i], i + 1);
+    keyBox.setSelectedId (1, juce::dontSendNotification);
+    addAndMakeVisible (keyBox);
+
+    scaleBox.addItem ("Off", 1);
+    scaleBox.addItem ("Major", 2);
+    scaleBox.addItem ("Minor", 3);
+    scaleBox.addItem ("Harmonic Minor", 4);
+    scaleBox.addItem ("Major Pentatonic", 5);
+    scaleBox.addItem ("Minor Pentatonic", 6);
+    scaleBox.setSelectedId (2, juce::dontSendNotification);
+    scaleBox.onChange = [this] { grid->repaint(); };
+    keyBox.onChange = [this] { grid->repaint(); };
+    addAndMakeVisible (scaleBox);
+
+    hintLabel.setText ("Ctrl+C/X/V: copy-cut-paste   Ctrl+drag: select   drag selected notes together   Del/right-drag: erase",
                        juce::dontSendNotification);
     hintLabel.setColour (juce::Label::textColourId, colours::textDim);
     hintLabel.setFont (juce::Font (juce::FontOptions (11.0f)));
@@ -710,6 +891,10 @@ void PianoRollPanel::resized()
     channelBox.setBounds (headerArea.removeFromLeft (170));
     headerArea.removeFromLeft (6);
     snapBox.setBounds (headerArea.removeFromLeft (110));
+    headerArea.removeFromLeft (6);
+    keyBox.setBounds (headerArea.removeFromLeft (62));
+    headerArea.removeFromLeft (6);
+    scaleBox.setBounds (headerArea.removeFromLeft (140));
     headerArea.removeFromLeft (10);
     hintLabel.setBounds (headerArea);
 
@@ -720,6 +905,31 @@ void PianoRollPanel::resized()
     // start scrolled to C5
     if (viewport.getViewPositionY() == 0)
         viewport.setViewPosition (0, pitchToY (kDefaultRootNote + 12));
+}
+
+bool PianoRollPanel::isPitchInHighlightedScale (int pitch) const
+{
+    const int mode = scaleBox.getSelectedId();
+    if (mode <= 1)
+        return false;
+
+    const int root = (keyBox.getSelectedId() - 1 + 12) % 12;
+    const int note = (pitch % 12 + 12) % 12;
+    const int interval = (note - root + 12) % 12;
+
+    switch (mode)
+    {
+        case 2: return interval == 0 || interval == 2 || interval == 4 || interval == 5
+                     || interval == 7 || interval == 9 || interval == 11;
+        case 3: return interval == 0 || interval == 2 || interval == 3 || interval == 5
+                     || interval == 7 || interval == 8 || interval == 10;
+        case 4: return interval == 0 || interval == 2 || interval == 3 || interval == 5
+                     || interval == 7 || interval == 8 || interval == 11;
+        case 5: return interval == 0 || interval == 2 || interval == 4 || interval == 7 || interval == 9;
+        case 6: return interval == 0 || interval == 3 || interval == 5 || interval == 7 || interval == 10;
+        default: break;
+    }
+    return false;
 }
 
 } // namespace fable

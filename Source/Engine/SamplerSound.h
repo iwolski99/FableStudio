@@ -15,8 +15,10 @@ namespace fable
 class FableSamplerSound : public juce::SynthesiserSound
 {
 public:
-    FableSamplerSound (juce::AudioBuffer<float>&& sampleData, double sampleSourceRate, int rootMidiNote)
-        : data (std::move (sampleData)), sourceRate (sampleSourceRate), rootNote (rootMidiNote) {}
+    FableSamplerSound (juce::AudioBuffer<float>&& sampleData, double sampleSourceRate, int rootMidiNote,
+                       float fadeInMsToUse, float fadeOutMsToUse)
+        : data (std::move (sampleData)), sourceRate (sampleSourceRate), rootNote (rootMidiNote),
+          fadeInMs (fadeInMsToUse), fadeOutMs (fadeOutMsToUse) {}
 
     bool appliesToNote (int) override    { return true; }
     bool appliesToChannel (int) override { return true; }
@@ -24,6 +26,8 @@ public:
     juce::AudioBuffer<float> data;
     double sourceRate = 44100.0;
     int    rootNote   = 60;
+    float  fadeInMs   = 0.0f;
+    float  fadeOutMs  = 0.0f;
 };
 
 class FableSamplerVoice : public juce::SynthesiserVoice
@@ -86,7 +90,22 @@ public:
             }
 
             const float frac = (float) (position - idx);
-            float s = (src[idx] + frac * (src[idx + 1] - src[idx])) * gain * releaseGain;
+            float envelope = 1.0f;
+            if (sound->fadeInMs > 0.0f)
+            {
+                const double fadeInSamples = sound->sourceRate * sound->fadeInMs / 1000.0;
+                if (fadeInSamples > 1.0)
+                    envelope = juce::jmin (envelope, (float) juce::jlimit (0.0, 1.0, position / fadeInSamples));
+            }
+            if (sound->fadeOutMs > 0.0f)
+            {
+                const double fadeOutSamples = sound->sourceRate * sound->fadeOutMs / 1000.0;
+                const double remaining = len - position;
+                if (fadeOutSamples > 1.0)
+                    envelope = juce::jmin (envelope, (float) juce::jlimit (0.0, 1.0, remaining / fadeOutSamples));
+            }
+
+            float s = (src[idx] + frac * (src[idx + 1] - src[idx])) * gain * releaseGain * envelope;
 
             for (int ch = 0; ch < output.getNumChannels(); ++ch)
                 output.addSample (ch, startSample + i, s);

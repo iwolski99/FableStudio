@@ -90,6 +90,8 @@ struct Channel
     bool             muted  = false;
     int              mixerTrack = 1;    // 1..16 insert, 0 = master
     int              rootNote = kDefaultRootNote;
+    float            sampleFadeInMs  = 0.0f;
+    float            sampleFadeOutMs = 0.0f;
     juce::Colour     colour { 0xff5a8f5a };
 };
 
@@ -109,6 +111,7 @@ struct AudioClip
 {
     juce::String filePath;
     juce::String name;
+    float gain       = 1.0f;
     int mixerTrack  = 0;   // 0 = master, 1..16 = inserts
     int track       = 0;   // playlist lane
     int startTick   = 0;   // absolute song position

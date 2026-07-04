@@ -271,7 +271,7 @@ void MainComponent::loadProjectFromFileAndSync (const juce::File& file)
     showStatus ("Loaded " + file.getFileName());
 }
 
-void MainComponent::saveProject (bool saveAs)
+void MainComponent::saveProject (bool saveAs, std::function<void (bool)> onComplete)
 {
     // capture live plugin state into the model before writing
     for (auto& channel : context.project.channels)
@@ -299,9 +299,13 @@ void MainComponent::saveProject (bool saveAs)
         {
             context.dirty = false;
             showStatus ("Saved " + context.currentFile.getFileName());
+            if (onComplete) onComplete (true);
         }
         else
+        {
             showStatus ("Save failed");
+            if (onComplete) onComplete (false);
+        }
         return;
     }
 
@@ -310,11 +314,14 @@ void MainComponent::saveProject (bool saveAs)
                       .getChildFile (context.project.name + ".fable"), "*.fable");
     chooser->launchAsync (juce::FileBrowserComponent::saveMode
                           | juce::FileBrowserComponent::warnAboutOverwriting,
-        [this] (const juce::FileChooser& fc)
+        [this, onComplete] (const juce::FileChooser& fc)
         {
             auto file = fc.getResult();
             if (file == juce::File())
+            {
+                if (onComplete) onComplete (false);
                 return;
+            }
             if (! file.hasFileExtension ("fable"))
                 file = file.withFileExtension ("fable");
 
@@ -325,10 +332,44 @@ void MainComponent::saveProject (bool saveAs)
                 context.dirty = false;
                 updateWindowTitle();
                 showStatus ("Saved " + file.getFileName());
+                if (onComplete) onComplete (true);
             }
             else
+            {
                 showStatus ("Save failed");
+                if (onComplete) onComplete (false);
+            }
         });
+}
+
+void MainComponent::requestClose (std::function<void()> onConfirmedClose)
+{
+    if (! context.dirty)
+    {
+        if (onConfirmedClose) onConfirmedClose();
+        return;
+    }
+
+    auto* editor = new juce::AlertWindow ("Unsaved changes",
+                                          "Save your project before closing?",
+                                          juce::MessageBoxIconType::WarningIcon);
+    editor->addButton ("Save", 1, juce::KeyPress (juce::KeyPress::returnKey));
+    editor->addButton ("Don't Save", 2);
+    editor->addButton ("Cancel", 0, juce::KeyPress (juce::KeyPress::escapeKey));
+    editor->enterModalState (true, juce::ModalCallbackFunction::create ([this, editor, onConfirmedClose] (int result)
+    {
+        if (result == 1)
+            saveProject (false, [onConfirmedClose] (bool saved)
+            {
+                if (saved && onConfirmedClose)
+                    onConfirmedClose();
+            });
+        else if (result == 2)
+        {
+            if (onConfirmedClose) onConfirmedClose();
+        }
+        delete editor;
+    }), false);
 }
 
 void MainComponent::exportWav()

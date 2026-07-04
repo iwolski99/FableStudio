@@ -31,6 +31,7 @@ public:
     void paint (juce::Graphics&) override;
     void resized() override;
     bool keyPressed (const juce::KeyPress&) override;
+    void requestClose (std::function<void()> onConfirmedClose);
 
     // MenuBarModel
     juce::StringArray getMenuBarNames() override;
@@ -42,7 +43,7 @@ private:
 
     void newProject();
     void openProject();
-    void saveProject (bool saveAs);
+    void saveProject (bool saveAs, std::function<void (bool)> onComplete = {});
     void exportWav();
     void loadProjectFromFileAndSync (const juce::File& file);
     void openPluginEditor (juce::AudioPluginInstance* instance, const juce::String& title);

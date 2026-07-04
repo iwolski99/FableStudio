@@ -50,11 +50,11 @@ namespace
                 const float frac = (float) (sourceSamplePosition - srcIndex);
                 const int srcNext = juce::jmin (srcIndex + 1, clip.audio.getNumSamples() - 1);
 
-                const float left = clip.audio.getSample (0, srcIndex)
-                                 + frac * (clip.audio.getSample (0, srcNext) - clip.audio.getSample (0, srcIndex));
+                const float left = (clip.audio.getSample (0, srcIndex)
+                                 + frac * (clip.audio.getSample (0, srcNext) - clip.audio.getSample (0, srcIndex))) * clip.gain;
                 const float right = clip.audio.getNumChannels() > 1
-                    ? clip.audio.getSample (1, srcIndex)
-                      + frac * (clip.audio.getSample (1, srcNext) - clip.audio.getSample (1, srcIndex))
+                    ? (clip.audio.getSample (1, srcIndex)
+                      + frac * (clip.audio.getSample (1, srcNext) - clip.audio.getSample (1, srcIndex))) * clip.gain
                     : left;
 
                 output.addSample (0, destStartSample + i, left);
@@ -219,7 +219,8 @@ juce::String AudioEngine::buildChannelGenerator (ChannelNode& node, Channel& cha
             else if (channel.samplePath.isNotEmpty())
                 sample = loadSampleFile (juce::File (channel.samplePath), formatManager, sourceRate);
 
-            node.setSamplerGenerator (std::move (sample), sourceRate, channel.rootNote);
+            node.setSamplerGenerator (std::move (sample), sourceRate, channel.rootNote,
+                                      channel.sampleFadeInMs, channel.sampleFadeOutMs);
             return {};
         }
 
@@ -423,7 +424,7 @@ void AudioEngine::previewSampleFile (const juce::File& file, int rootNote)
         return;
 
     auto node = std::make_shared<ChannelNode> (-1);
-    node->setSamplerGenerator (std::move (sample), sourceRate, rootNote);
+    node->setSamplerGenerator (std::move (sample), sourceRate, rootNote, 0.0f, 0.0f);
     Channel previewChannel;
     previewChannel.mixerTrack = 0;
     node->updateFromModel (previewChannel);

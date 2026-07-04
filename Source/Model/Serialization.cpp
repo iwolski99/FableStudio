@@ -66,6 +66,8 @@ juce::var projectToVar (const Project& p)
         o->setProperty ("muted", c.muted);
         o->setProperty ("mixerTrack", c.mixerTrack);
         o->setProperty ("rootNote", c.rootNote);
+        o->setProperty ("sampleFadeInMs", c.sampleFadeInMs);
+        o->setProperty ("sampleFadeOutMs", c.sampleFadeOutMs);
         o->setProperty ("colour", c.colour.toString());
         channels.add (o.get());
     }
@@ -129,6 +131,7 @@ juce::var projectToVar (const Project& p)
         auto o = obj();
         o->setProperty ("file", c.filePath);
         o->setProperty ("name", c.name);
+        o->setProperty ("gain", c.gain);
         o->setProperty ("mixerTrack", c.mixerTrack);
         o->setProperty ("track", c.track);
         o->setProperty ("start", c.startTick);
@@ -202,6 +205,8 @@ bool projectFromVar (const juce::var& v, Project& out)
             c.muted      = (bool) cv["muted"];
             c.mixerTrack = juce::jlimit (0, kNumMixerTracks - 1, (int) cv["mixerTrack"]);
             c.rootNote   = juce::jlimit (0, 127, (int) cv["rootNote"]);
+            c.sampleFadeInMs  = juce::jlimit (0.0f, 5000.0f, (float) (double) cv["sampleFadeInMs"]);
+            c.sampleFadeOutMs = juce::jlimit (0.0f, 5000.0f, (float) (double) cv["sampleFadeOutMs"]);
             c.colour     = juce::Colour::fromString (cv["colour"].toString());
             p.nextChannelId = juce::jmax (p.nextChannelId, c.id + 1);
             p.channels.push_back (std::move (c));
@@ -270,6 +275,9 @@ bool projectFromVar (const juce::var& v, Project& out)
             AudioClip c;
             c.filePath    = cv["file"].toString();
             c.name        = cv["name"].toString();
+            c.gain        = cv.hasProperty ("gain")
+                                ? juce::jlimit (0.0f, 2.0f, (float) (double) cv["gain"])
+                                : 1.0f;
             c.mixerTrack  = juce::jlimit (0, kNumMixerTracks - 1, (int) cv["mixerTrack"]);
             c.track       = juce::jmax (0, (int) cv["track"]);
             c.startTick   = juce::jmax (0, (int) cv["start"]);

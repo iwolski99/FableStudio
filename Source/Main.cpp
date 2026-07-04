@@ -55,7 +55,10 @@ public:
 
     void systemRequestedQuit() override
     {
-        quit();
+        if (mainWindow != nullptr)
+            mainWindow->requestQuit();
+        else
+            quit();
     }
 
     class MainWindow : public juce::DocumentWindow
@@ -83,7 +86,15 @@ public:
 
         void closeButtonPressed() override
         {
-            juce::JUCEApplication::getInstance()->systemRequestedQuit();
+            requestQuit();
+        }
+
+        void requestQuit()
+        {
+            if (auto* main = dynamic_cast<MainComponent*> (getContentComponent()))
+                main->requestClose ([] { juce::JUCEApplication::getInstance()->quit(); });
+            else
+                juce::JUCEApplication::getInstance()->quit();
         }
 
         bool keyPressed (const juce::KeyPress& key) override

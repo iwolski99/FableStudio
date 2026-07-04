@@ -107,6 +107,11 @@ public:
         nameButton.onClick = [this]
         {
             context.selectChannel (channelId);
+            if (auto* c = context.project.channelById (channelId); c != nullptr && c->type == GeneratorType::sampler)
+            {
+                openSamplerSettings();
+                return;
+            }
             // audition on select, like clicking a channel button
             context.engine.auditionNoteOn (channelId, rootNoteOf(), 0.8f);
             juce::Timer::callAfterDelay (220, [ctx = &context, id = channelId, pitch = rootNoteOf()]
@@ -273,6 +278,7 @@ public:
         {
             m.addSeparator();
             m.addItem ("Load sample...", [this] { loadSample(); });
+            m.addItem ("Channel settings...", [this] { openSamplerSettings(); });
         }
         if (channel->type == GeneratorType::plugin)
         {
@@ -343,6 +349,46 @@ public:
                     context.structureChanged();
                 }
             });
+    }
+
+    void openSamplerSettings()
+    {
+        auto* channel = context.project.channelById (channelId);
+        if (channel == nullptr || channel->type != GeneratorType::sampler)
+            return;
+
+        auto* editor = new juce::AlertWindow ("Channel settings", channel->name, juce::MessageBoxIconType::NoIcon);
+        auto* fadeIn = new juce::Slider();
+        auto* fadeOut = new juce::Slider();
+
+        for (auto* slider : { fadeIn, fadeOut })
+        {
+            slider->setSliderStyle (juce::Slider::LinearHorizontal);
+            slider->setTextBoxStyle (juce::Slider::TextBoxRight, false, 70, 20);
+            slider->setRange (0.0, 5000.0, 1.0);
+            slider->setTextValueSuffix (" ms");
+        }
+
+        fadeIn->setValue (channel->sampleFadeInMs, juce::dontSendNotification);
+        fadeOut->setValue (channel->sampleFadeOutMs, juce::dontSendNotification);
+
+        editor->addTextBlock ("Fade in");
+        editor->addCustomComponent (fadeIn);
+        editor->addTextBlock ("Fade out");
+        editor->addCustomComponent (fadeOut);
+        editor->addButton ("OK", 1, juce::KeyPress (juce::KeyPress::returnKey));
+        editor->addButton ("Cancel", 0, juce::KeyPress (juce::KeyPress::escapeKey));
+        editor->enterModalState (true, juce::ModalCallbackFunction::create ([this, editor, fadeIn, fadeOut] (int result)
+        {
+            if (result == 1)
+                if (auto* c = context.project.channelById (channelId))
+                {
+                    c->sampleFadeInMs = (float) fadeIn->getValue();
+                    c->sampleFadeOutMs = (float) fadeOut->getValue();
+                    context.structureChanged();
+                }
+            delete editor;
+        }), false);
     }
 
     AppContext& context;

@@ -23,6 +23,9 @@ struct AppContext
 
     juce::File currentFile;
     bool       dirty = false;
+    std::vector<Note> noteClipboard;
+    int noteClipboardMinStart = 0;
+    int noteClipboardBasePitch = kDefaultRootNote;
 
     int selectedPatternIndex = 0;   // channel rack + playlist paint source
     int selectedChannelId    = -1;  // piano roll target
@@ -125,6 +128,7 @@ struct AppContext
         AudioClip clip;
         clip.filePath    = file.getFullPathName();
         clip.name        = file.getFileNameWithoutExtension();
+        clip.gain        = 1.0f;
         clip.mixerTrack  = 0;
         clip.track       = track;
         clip.startTick   = startTick;

@@ -237,7 +237,8 @@ public:
             g.setFont (juce::Font (juce::FontOptions (11.0f, juce::Font::bold)));
             auto label = (c.name.isNotEmpty() ? c.name : juce::File (c.filePath).getFileNameWithoutExtension())
                        + "  >  " + (c.mixerTrack == 0 ? juce::String ("Master")
-                                                      : "Insert " + juce::String (c.mixerTrack));
+                                                      : "Insert " + juce::String (c.mixerTrack))
+                       + "  >  Vol " + juce::String (juce::roundToInt (c.gain * 100.0f)) + "%";
             if (c.muted)
                 label += "  (muted)";
             g.drawText (label, r.reduced (5.0f, 0.0f), juce::Justification::centredLeft);
@@ -867,6 +868,7 @@ private:
             });
         }
         m.addSubMenu ("Route to mixer track", route);
+        m.addItem ("Clip volume...", [this, clipIndex] { editAudioClipGain (clipIndex); });
         m.addSeparator();
         m.addItem (owner.context.project.audioClips[(size_t) clipIndex].muted ? "Unmute" : "Mute",
                   [this, clipIndex]
@@ -895,6 +897,42 @@ private:
         m.showMenuAsync (juce::PopupMenu::Options().withTargetComponent (this));
         draggedIndex = -1;
         draggedKind = DragKind::none;
+    }
+
+    void mouseDoubleClick (const juce::MouseEvent& e) override
+    {
+        bool onEdge = false;
+        const int audioIndex = audioClipIndexAt (e.getPosition(), onEdge);
+        if (audioIndex >= 0)
+            editAudioClipGain (audioIndex);
+    }
+
+    void editAudioClipGain (int clipIndex)
+    {
+        if (clipIndex < 0 || clipIndex >= (int) owner.context.project.audioClips.size())
+            return;
+
+        auto* clip = &owner.context.project.audioClips[(size_t) clipIndex];
+        auto* editor = new juce::AlertWindow ("Audio clip volume", clip->name, juce::MessageBoxIconType::NoIcon);
+        auto* gainSlider = new juce::Slider();
+        gainSlider->setSliderStyle (juce::Slider::LinearHorizontal);
+        gainSlider->setTextBoxStyle (juce::Slider::TextBoxRight, false, 70, 20);
+        gainSlider->setRange (0.0, 2.0, 0.01);
+        gainSlider->setTextValueSuffix (" x");
+        gainSlider->setValue (clip->gain, juce::dontSendNotification);
+        editor->addCustomComponent (gainSlider);
+        editor->addButton ("OK", 1, juce::KeyPress (juce::KeyPress::returnKey));
+        editor->addButton ("Cancel", 0, juce::KeyPress (juce::KeyPress::escapeKey));
+        editor->enterModalState (true, juce::ModalCallbackFunction::create ([this, editor, gainSlider, clipIndex] (int result)
+        {
+            if (result == 1 && clipIndex >= 0 && clipIndex < (int) owner.context.project.audioClips.size())
+            {
+                owner.context.project.audioClips[(size_t) clipIndex].gain = (float) gainSlider->getValue();
+                owner.context.contentChanged();
+                repaint();
+            }
+            delete editor;
+        }), false);
     }
 };
 

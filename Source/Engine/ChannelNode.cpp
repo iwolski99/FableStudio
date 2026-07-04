@@ -20,12 +20,13 @@ void ChannelNode::setSynthGenerator()
         synth->setCurrentPlaybackSampleRate (preparedRate);
 }
 
-void ChannelNode::setSamplerGenerator (juce::AudioBuffer<float>&& sample, double sourceRate, int rootNote)
+void ChannelNode::setSamplerGenerator (juce::AudioBuffer<float>&& sample, double sourceRate, int rootNote,
+                                       float fadeInMs, float fadeOutMs)
 {
     auto s = std::make_unique<juce::Synthesiser>();
     s->setNoteStealingEnabled (true);
     s->addVoice (new FableSamplerVoice());
-    s->addSound (new FableSamplerSound (std::move (sample), sourceRate, rootNote));
+    s->addSound (new FableSamplerSound (std::move (sample), sourceRate, rootNote, fadeInMs, fadeOutMs));
     plugin.reset();
     synth = std::move (s);
     if (prepared)

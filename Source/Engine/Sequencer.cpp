@@ -85,6 +85,7 @@ std::shared_ptr<const PlaybackData> compilePlayback (const Project& p,
         CompiledAudioClip clip;
         clip.name       = c.name;
         clip.filePath   = c.filePath;
+        clip.gain       = c.gain;
         clip.mixerTrack = c.mixerTrack;
         clip.track      = c.track;
         clip.startTick  = c.startTick;
