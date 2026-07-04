@@ -30,8 +30,6 @@ public:
     void resized() override;
 
 private:
-    class SampleFileTree;
-
     // ListBoxModel (plugins)
     int getNumRows() override;
     void paintListBoxItem (int row, juce::Graphics&, int width, int height, bool selected) override;
@@ -39,13 +37,12 @@ private:
 
     // FileBrowserListener (samples)
     void selectionChanged() override {}
-    void fileClicked (const juce::File&, const juce::MouseEvent&) override {}
+    void fileClicked (const juce::File&, const juce::MouseEvent&) override;
     void fileDoubleClicked (const juce::File&) override;
     void browserRootChanged (const juce::File&) override {}
 
     void changeListenerCallback (juce::ChangeBroadcaster*) override;
     void refreshPlugins();
-    void startFileDrag();
 
     void loadSampleRoots();
     void saveSampleRoots();
@@ -67,7 +64,13 @@ private:
     juce::TimeSliceThread scanThread { "file browser" };
     std::unique_ptr<juce::WildcardFileFilter> fileFilter;
     std::unique_ptr<juce::DirectoryContentsList> dirContents;
-    std::unique_ptr<SampleFileTree> fileTree;
+    std::unique_ptr<juce::FileTreeComponent> fileTree;
+
+    // Click-to-preview: plays alongside the main engine callback via a second
+    // AudioSourcePlayer registered on the same device manager.
+    juce::AudioTransportSource previewTransport;
+    juce::AudioSourcePlayer previewPlayer;
+    std::unique_ptr<juce::AudioFormatReaderSource> previewReaderSource;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (BrowserPanel)
 };

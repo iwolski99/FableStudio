@@ -7,12 +7,16 @@ static constexpr int kRowHeight  = 30;
 static constexpr int kLeftWidth  = 224;   // led + knobs + name
 static constexpr int kStepSize   = 24;
 
-static juce::File audioFileFromDragDescription (const juce::var& description)
+// The Browser's FileTreeComponent uses one fixed drag description for every
+// row (JUCE's TreeView always starts the drag itself once a non-empty
+// description is set, before our code ever sees the event), so the file
+// being dragged is resolved from the source component's current selection
+// rather than from the description text.
+static juce::File audioFileFromDragSource (const juce::DragAndDropTarget::SourceDetails& details)
 {
-    const auto text = description.toString();
-    if (! text.startsWith ("audiofile:"))
-        return {};
-    return juce::File (text.fromFirstOccurrenceOf ("audiofile:", false, false));
+    if (auto* tree = dynamic_cast<juce::FileTreeComponent*> (details.sourceComponent.get()))
+        return tree->getSelectedFile (0);
+    return {};
 }
 
 // Child controls (button/sliders) sit on top of the row and would otherwise
@@ -588,7 +592,7 @@ void ChannelRackPanel::addChannelMenu()
 
 bool ChannelRackPanel::isInterestedInDragSource (const SourceDetails& dragSourceDetails)
 {
-    return context.isSupportedAudioFile (audioFileFromDragDescription (dragSourceDetails.description));
+    return context.isSupportedAudioFile (audioFileFromDragSource (dragSourceDetails));
 }
 
 void ChannelRackPanel::itemDragEnter (const SourceDetails&)
@@ -608,7 +612,7 @@ void ChannelRackPanel::itemDropped (const SourceDetails& dragSourceDetails)
     dragActive = false;
     repaint();
 
-    const auto file = audioFileFromDragDescription (dragSourceDetails.description);
+    const auto file = audioFileFromDragSource (dragSourceDetails);
     if (! context.isSupportedAudioFile (file))
         return;
 

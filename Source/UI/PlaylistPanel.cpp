@@ -16,12 +16,14 @@ static constexpr float kPlPixelsPerTick = 44.0f / (float) kTicksPerBar;   // bar
 static int plTickToX (double tick) { return kLabelWidth + (int) (tick * kPlPixelsPerTick); }
 static double plXToTick (int x)    { return juce::jmax (0.0, (x - kLabelWidth) / (double) kPlPixelsPerTick); }
 
-static juce::File audioFileFromDragDescription (const juce::var& description)
+// See the matching comment in ChannelRackPanel.cpp: the Browser's file tree
+// uses one fixed drag description, so the actual file is read from the
+// source component's selection instead.
+static juce::File audioFileFromDragSource (const juce::DragAndDropTarget::SourceDetails& details)
 {
-    const auto text = description.toString();
-    if (! text.startsWith ("audiofile:"))
-        return {};
-    return juce::File (text.fromFirstOccurrenceOf ("audiofile:", false, false));
+    if (auto* tree = dynamic_cast<juce::FileTreeComponent*> (details.sourceComponent.get()))
+        return tree->getSelectedFile (0);
+    return {};
 }
 
 class PlaylistPanel::WaveformCache
@@ -1039,7 +1041,7 @@ void PlaylistPanel::resized()
 
 bool PlaylistPanel::isInterestedInDragSource (const SourceDetails& dragSourceDetails)
 {
-    return context.isSupportedAudioFile (audioFileFromDragDescription (dragSourceDetails.description));
+    return context.isSupportedAudioFile (audioFileFromDragSource (dragSourceDetails));
 }
 
 void PlaylistPanel::itemDragEnter (const SourceDetails& dragSourceDetails)
@@ -1066,7 +1068,7 @@ void PlaylistPanel::itemDropped (const SourceDetails& dragSourceDetails)
     dragActive = false;
     repaint();
 
-    const auto file = audioFileFromDragDescription (dragSourceDetails.description);
+    const auto file = audioFileFromDragSource (dragSourceDetails);
     if (! context.isSupportedAudioFile (file))
         return;
 

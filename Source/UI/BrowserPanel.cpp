@@ -3,22 +3,6 @@
 namespace fable
 {
 
-class BrowserPanel::SampleFileTree : public juce::FileTreeComponent
-{
-public:
-    SampleFileTree (juce::DirectoryContentsList& list, BrowserPanel& ownerToUse)
-        : juce::FileTreeComponent (list), owner (ownerToUse) {}
-
-    void mouseDrag (const juce::MouseEvent& e) override
-    {
-        owner.startFileDrag();
-        juce::FileTreeComponent::mouseDrag (e);
-    }
-
-private:
-    BrowserPanel& owner;
-};
-
 BrowserPanel::BrowserPanel (AppContext& ctx) : context (ctx)
 {
     for (auto* header : { &pluginsHeader, &samplesHeader })
@@ -60,10 +44,19 @@ BrowserPanel::BrowserPanel (AppContext& ctx) : context (ctx)
     refreshRootBox();
     setRoot (0);
 
-    fileTree = std::make_unique<SampleFileTree> (*dirContents, *this);
+    fileTree = std::make_unique<juce::FileTreeComponent> (*dirContents);
     fileTree->addListener (this);
     fileTree->setColour (juce::TreeView::backgroundColourId, colours::panelDark);
+    // Non-empty description makes juce::TreeView start a native drag on its own;
+    // the actual file dropped is resolved by the target from the source
+    // FileTreeComponent's selection (see audioFileFromDragSource in
+    // ChannelRackPanel.cpp / PlaylistPanel.cpp), since the description string
+    // itself is the same for every row.
+    fileTree->setDragAndDropDescription ("audiofile");
     addAndMakeVisible (*fileTree);
+
+    previewPlayer.setSource (&previewTransport);
+    context.engine.getDeviceManager().addAudioCallback (&previewPlayer);
 
     context.structureBroadcaster.addChangeListener (this);
     refreshPlugins();
@@ -72,6 +65,8 @@ BrowserPanel::BrowserPanel (AppContext& ctx) : context (ctx)
 
 BrowserPanel::~BrowserPanel()
 {
+    context.engine.getDeviceManager().removeAudioCallback (&previewPlayer);
+    previewPlayer.setSource (nullptr);
     context.structureBroadcaster.removeChangeListener (this);
     fileTree->removeListener (this);
 }
@@ -165,17 +160,21 @@ void BrowserPanel::changeListenerCallback (juce::ChangeBroadcaster*)
     refreshPlugins();
 }
 
-void BrowserPanel::startFileDrag()
+void BrowserPanel::fileClicked (const juce::File& file, const juce::MouseEvent& e)
 {
-    if (fileTree == nullptr || fileTree->getNumSelectedFiles() <= 0)
+    if (e.mods.isPopupMenu() || ! context.isSupportedAudioFile (file))
         return;
 
-    const auto file = fileTree->getSelectedFile (0);
-    if (! context.isSupportedAudioFile (file))
-        return;
+    previewTransport.stop();
+    previewTransport.setSource (nullptr);
+    previewReaderSource.reset();
 
-    if (auto* drag = juce::DragAndDropContainer::findParentDragContainerFor (this))
-        drag->startDragging ("audiofile:" + file.getFullPathName(), this);
+    if (auto* reader = context.engine.getFormatManager().createReaderFor (file))
+    {
+        previewReaderSource = std::make_unique<juce::AudioFormatReaderSource> (reader, true);
+        previewTransport.setSource (previewReaderSource.get(), 0, nullptr, reader->sampleRate);
+        previewTransport.start();
+    }
 }
 
 int BrowserPanel::getNumRows()
