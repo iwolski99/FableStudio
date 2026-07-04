@@ -62,6 +62,10 @@ public:
     std::atomic<bool>  muted { false }, solo { false };
 
 private:
+    // Guards the slot array between message-thread edits and audio-thread
+    // processing. The audio thread only try-locks: during the brief moment a
+    // slot is being swapped, the fx chain is skipped for one block.
+    juce::SpinLock slotLock;
     std::array<Slot, kNumEffectSlots> slots;
     std::array<std::atomic<float>, 2> meter { 0.0f, 0.0f };
     juce::MidiBuffer emptyMidi;

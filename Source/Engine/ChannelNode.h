@@ -37,6 +37,13 @@ public:
 
     juce::AudioPluginInstance* getPluginInstance() const { return plugin.get(); }
 
+    // Identifies what the generator was built from ("synth", "sampler:<path>",
+    // "plugin:<id>"). Once a node is published to the audio thread its
+    // generator is immutable: if the source changes, build a NEW node instead
+    // (the old one stays alive in the engine graveyard until unused).
+    juce::String generatorSource;
+    bool isPrepared() const { return prepared; }
+
     // --- audio thread ---------------------------------------------------
     juce::MidiBuffer midiBuffer;   // filled by the sequencer each block
 

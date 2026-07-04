@@ -90,8 +90,21 @@ std::shared_ptr<MixerBus> AudioEngine::getMixerBus (int index) const
     return nullptr;
 }
 
+static juce::String generatorSourceFor (const Channel& channel)
+{
+    switch (channel.type)
+    {
+        case GeneratorType::synth:   return "synth";
+        case GeneratorType::sampler: return "sampler:" + channel.samplePath;
+        case GeneratorType::plugin:  return "plugin:" + channel.pluginIdentifier;
+    }
+    return {};
+}
+
 juce::String AudioEngine::buildChannelGenerator (ChannelNode& node, Channel& channel)
 {
+    node.generatorSource = generatorSourceFor (channel);
+
     switch (channel.type)
     {
         case GeneratorType::synth:
@@ -171,34 +184,27 @@ juce::StringArray AudioEngine::syncWithProject (Project& project)
     auto oldSet = copyRenderSet();
     auto newSet = std::make_shared<RenderSet>();
 
-    // Reuse existing nodes (keeps plugin instances alive); build missing ones.
+    // Reuse a node only when its generator source is unchanged (published nodes
+    // are immutable apart from their parameter atomics); otherwise build fresh.
     for (auto& channel : project.channels)
     {
         std::shared_ptr<ChannelNode> node;
+        const auto wantedSource = generatorSourceFor (channel);
+
         for (auto& existing : oldSet->channels)
-            if (existing->channelId == channel.id)
+            if (existing->channelId == channel.id && existing->generatorSource == wantedSource)
                 node = existing;
 
-        const bool needsRebuild = node == nullptr
-            || (channel.type == GeneratorType::plugin) != (node->getPluginInstance() != nullptr);
-
         if (node == nullptr)
-            node = std::make_shared<ChannelNode> (channel.id);
-
-        if (needsRebuild || channel.type != GeneratorType::plugin)
         {
-            // Samplers/synths are cheap to rebuild; plugins only when type changed.
-            if (needsRebuild || channel.type == GeneratorType::sampler
-                             || channel.type == GeneratorType::synth)
-            {
-                auto err = buildChannelGenerator (*node, channel);
-                if (err.isNotEmpty())
-                    errors.add (err);
-            }
+            node = std::make_shared<ChannelNode> (channel.id);
+            auto err = buildChannelGenerator (*node, channel);
+            if (err.isNotEmpty())
+                errors.add (err);
         }
 
         node->updateFromModel (channel);
-        if (deviceRunning)
+        if (deviceRunning && ! node->isPrepared())
             node->prepare (currentSampleRate, currentBlockSize);
         newSet->channels.push_back (std::move (node));
     }
@@ -229,8 +235,6 @@ juce::StringArray AudioEngine::syncWithProject (Project& project)
             }
         }
         bus.updateFromModel (model);
-        if (deviceRunning)
-            bus.prepare (currentSampleRate, currentBlockSize);
     }
 
     newSet->playback = compilePlayback (project);

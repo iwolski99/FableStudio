@@ -10,36 +10,45 @@ MixerBus::~MixerBus()
 
 void MixerBus::setSlotBuiltin (int slotIndex, EffectType type)
 {
+    auto builtin = BuiltinEffect::create (type);
+    if (builtin != nullptr && prepared)
+        builtin->prepare (preparedRate, preparedBlockSize);
+
+    const juce::SpinLock::ScopedLockType sl (slotLock);
     auto& slot = getSlot (slotIndex);
     slot.plugin.reset();
-    slot.builtin = BuiltinEffect::create (type);
+    slot.builtin = std::move (builtin);
     slot.type    = slot.builtin != nullptr ? type : EffectType::none;
-    if (slot.builtin != nullptr && prepared)
-        slot.builtin->prepare (preparedRate, preparedBlockSize);
 }
 
 void MixerBus::setSlotPlugin (int slotIndex, std::unique_ptr<juce::AudioPluginInstance> instance)
 {
+    if (instance != nullptr && prepared)
+    {
+        instance->enableAllBuses();
+        instance->setPlayConfigDetails (2, 2, preparedRate, preparedBlockSize);
+        instance->prepareToPlay (preparedRate, preparedBlockSize);
+    }
+
+    const juce::SpinLock::ScopedLockType sl (slotLock);
     auto& slot = getSlot (slotIndex);
     slot.builtin.reset();
     slot.plugin = std::move (instance);
     slot.type   = slot.plugin != nullptr ? EffectType::plugin : EffectType::none;
-    if (slot.plugin != nullptr && prepared)
-    {
-        slot.plugin->enableAllBuses();
-        slot.plugin->setPlayConfigDetails (2, 2, preparedRate, preparedBlockSize);
-        slot.plugin->prepareToPlay (preparedRate, preparedBlockSize);
-    }
 }
 
 void MixerBus::clearSlot (int slotIndex)
 {
-    auto& slot = getSlot (slotIndex);
-    if (slot.plugin != nullptr && prepared)
-        slot.plugin->releaseResources();
-    slot.plugin.reset();
-    slot.builtin.reset();
-    slot.type = EffectType::none;
+    std::unique_ptr<juce::AudioPluginInstance> retiredPlugin;
+    {
+        const juce::SpinLock::ScopedLockType sl (slotLock);
+        auto& slot = getSlot (slotIndex);
+        retiredPlugin = std::move (slot.plugin);
+        slot.builtin.reset();
+        slot.type = EffectType::none;
+    }
+    if (retiredPlugin != nullptr && prepared)
+        retiredPlugin->releaseResources();
 }
 
 void MixerBus::prepare (double sampleRate, int maxBlockSize)
@@ -84,16 +93,23 @@ void MixerBus::processBlock (int numSamples)
 
     juce::AudioBuffer<float> view (buffer.getArrayOfWritePointers(), 2, 0, numSamples);
 
-    for (auto& slot : slots)
     {
-        if (! slot.enabled.load())
-            continue;
-        if (slot.builtin != nullptr)
-            slot.builtin->process (view);
-        else if (slot.plugin != nullptr)
+        // Skip the fx chain for one block if a slot is mid-edit on the message thread.
+        const juce::SpinLock::ScopedTryLockType sl (slotLock);
+        if (sl.isLocked())
         {
-            emptyMidi.clear();
-            slot.plugin->processBlock (view, emptyMidi);
+            for (auto& slot : slots)
+            {
+                if (! slot.enabled.load())
+                    continue;
+                if (slot.builtin != nullptr)
+                    slot.builtin->process (view);
+                else if (slot.plugin != nullptr)
+                {
+                    emptyMidi.clear();
+                    slot.plugin->processBlock (view, emptyMidi);
+                }
+            }
         }
     }
 

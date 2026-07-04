@@ -1,0 +1,3100 @@
+{
+  "app": "FableStudio",
+  "version": 1,
+  "name": "Untitled",
+  "bpm": 140.0,
+  "swing": 0,
+  "nextChannelId": 6,
+  "channels": [
+    {
+      "id": 1,
+      "name": "Kick",
+      "type": 0,
+      "sample": "builtin:kick",
+      "plugin": "",
+      "pluginState": "",
+      "volume": 0.779999971389771,
+      "pan": 0.0,
+      "muted": false,
+      "mixerTrack": 1,
+      "rootNote": 60,
+      "colour": "ff58a05e"
+    },
+    {
+      "id": 2,
+      "name": "Clap",
+      "type": 0,
+      "sample": "builtin:clap",
+      "plugin": "",
+      "pluginState": "",
+      "volume": 0.779999971389771,
+      "pan": 0.0,
+      "muted": false,
+      "mixerTrack": 2,
+      "rootNote": 60,
+      "colour": "ffc9803c"
+    },
+    {
+      "id": 3,
+      "name": "Hat",
+      "type": 0,
+      "sample": "builtin:hat",
+      "plugin": "",
+      "pluginState": "",
+      "volume": 0.779999971389771,
+      "pan": 0.0,
+      "muted": false,
+      "mixerTrack": 3,
+      "rootNote": 60,
+      "colour": "ff5f86c0"
+    },
+    {
+      "id": 4,
+      "name": "Snare",
+      "type": 0,
+      "sample": "builtin:snare",
+      "plugin": "",
+      "pluginState": "",
+      "volume": 0.779999971389771,
+      "pan": 0.0,
+      "muted": false,
+      "mixerTrack": 4,
+      "rootNote": 60,
+      "colour": "ffb05fb0"
+    },
+    {
+      "id": 5,
+      "name": "FableSynth",
+      "type": 1,
+      "sample": "",
+      "plugin": "",
+      "pluginState": "",
+      "volume": 0.779999971389771,
+      "pan": 0.0,
+      "muted": false,
+      "mixerTrack": 5,
+      "rootNote": 60,
+      "colour": "ffc0c05f"
+    }
+  ],
+  "patterns": [
+    {
+      "name": "Pattern 1",
+      "lengthSteps": 16,
+      "channelData": [
+        {
+          "channel": 1,
+          "steps": "1000100010001000",
+          "stepVel": [
+            0.800000011920929,
+            0.800000011920929,
+            0.800000011920929,
+            0.800000011920929,
+            0.800000011920929,
+            0.800000011920929,
+            0.800000011920929,
+            0.800000011920929,
+            0.800000011920929,
+            0.800000011920929,
+            0.800000011920929,
+            0.800000011920929,
+            0.800000011920929,
+            0.800000011920929,
+            0.800000011920929,
+            0.800000011920929
+          ],
+          "notes": []
+        },
+        {
+          "channel": 2,
+          "steps": "0000100000001000",
+          "stepVel": [
+            0.800000011920929,
+            0.800000011920929,
+            0.800000011920929,
+            0.800000011920929,
+            0.800000011920929,
+            0.800000011920929,
+            0.800000011920929,
+            0.800000011920929,
+            0.800000011920929,
+            0.800000011920929,
+            0.800000011920929,
+            0.800000011920929,
+            0.800000011920929,
+            0.800000011920929,
+            0.800000011920929,
+            0.800000011920929
+          ],
+          "notes": []
+        },
+        {
+          "channel": 3,
+          "steps": "0010001000100010",
+          "stepVel": [
+            0.800000011920929,
+            0.800000011920929,
+            0.800000011920929,
+            0.800000011920929,
+            0.800000011920929,
+            0.800000011920929,
+            0.800000011920929,
+            0.800000011920929,
+            0.800000011920929,
+            0.800000011920929,
+            0.800000011920929,
+            0.800000011920929,
+            0.800000011920929,
+            0.800000011920929,
+            0.800000011920929,
+            0.800000011920929
+          ],
+          "notes": []
+        },
+        {
+          "channel": 5,
+          "steps": "0000000000000000",
+          "stepVel": [
+            0.800000011920929,
+            0.800000011920929,
+            0.800000011920929,
+            0.800000011920929,
+            0.800000011920929,
+            0.800000011920929,
+            0.800000011920929,
+            0.800000011920929,
+            0.800000011920929,
+            0.800000011920929,
+            0.800000011920929,
+            0.800000011920929,
+            0.800000011920929,
+            0.800000011920929,
+            0.800000011920929,
+            0.800000011920929
+          ],
+          "notes": [
+            {
+              "t": 0,
+              "l": 960,
+              "p": 57,
+              "v": 0.699999988079071
+            },
+            {
+              "t": 960,
+              "l": 480,
+              "p": 60,
+              "v": 0.699999988079071
+            },
+            {
+              "t": 1440,
+              "l": 480,
+              "p": 64,
+              "v": 0.699999988079071
+            },
+            {
+              "t": 1920,
+              "l": 960,
+              "p": 62,
+              "v": 0.699999988079071
+            },
+            {
+              "t": 2880,
+              "l": 960,
+              "p": 55,
+              "v": 0.699999988079071
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "clips": [
+    {
+      "pattern": 0,
+      "track": 0,
+      "start": 0,
+      "length": 3840
+    },
+    {
+      "pattern": 0,
+      "track": 0,
+      "start": 3840,
+      "length": 3840
+    }
+  ],
+  "mixerTracks": [
+    {
+      "name": "Master",
+      "volume": 0.800000011920929,
+      "pan": 0.0,
+      "muted": false,
+      "solo": false,
+      "slots": [
+        {
+          "type": 4,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Insert 1",
+      "volume": 0.800000011920929,
+      "pan": 0.0,
+      "muted": false,
+      "solo": false,
+      "slots": [
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Insert 2",
+      "volume": 0.800000011920929,
+      "pan": 0.0,
+      "muted": false,
+      "solo": false,
+      "slots": [
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Insert 3",
+      "volume": 0.800000011920929,
+      "pan": 0.0,
+      "muted": false,
+      "solo": false,
+      "slots": [
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Insert 4",
+      "volume": 0.800000011920929,
+      "pan": 0.0,
+      "muted": false,
+      "solo": false,
+      "slots": [
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Insert 5",
+      "volume": 0.800000011920929,
+      "pan": 0.0,
+      "muted": false,
+      "solo": false,
+      "slots": [
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Insert 6",
+      "volume": 0.800000011920929,
+      "pan": 0.0,
+      "muted": false,
+      "solo": false,
+      "slots": [
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Insert 7",
+      "volume": 0.800000011920929,
+      "pan": 0.0,
+      "muted": false,
+      "solo": false,
+      "slots": [
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Insert 8",
+      "volume": 0.800000011920929,
+      "pan": 0.0,
+      "muted": false,
+      "solo": false,
+      "slots": [
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Insert 9",
+      "volume": 0.800000011920929,
+      "pan": 0.0,
+      "muted": false,
+      "solo": false,
+      "slots": [
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Insert 10",
+      "volume": 0.800000011920929,
+      "pan": 0.0,
+      "muted": false,
+      "solo": false,
+      "slots": [
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Insert 11",
+      "volume": 0.800000011920929,
+      "pan": 0.0,
+      "muted": false,
+      "solo": false,
+      "slots": [
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Insert 12",
+      "volume": 0.800000011920929,
+      "pan": 0.0,
+      "muted": false,
+      "solo": false,
+      "slots": [
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Insert 13",
+      "volume": 0.800000011920929,
+      "pan": 0.0,
+      "muted": false,
+      "solo": false,
+      "slots": [
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Insert 14",
+      "volume": 0.800000011920929,
+      "pan": 0.0,
+      "muted": false,
+      "solo": false,
+      "slots": [
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Insert 15",
+      "volume": 0.800000011920929,
+      "pan": 0.0,
+      "muted": false,
+      "solo": false,
+      "slots": [
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Insert 16",
+      "volume": 0.800000011920929,
+      "pan": 0.0,
+      "muted": false,
+      "solo": false,
+      "slots": [
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "type": 0,
+          "plugin": "",
+          "pluginState": "",
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ]
+        }
+      ]
+    }
+  ]
+}
