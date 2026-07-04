@@ -50,6 +50,14 @@ private:
     void showStatus (const juce::String& message);
     void updateWindowTitle();
 
+    // Bringing a panel to front should never be a two-click operation: if it's
+    // already the frontmost visible panel, the button/shortcut hides it;
+    // otherwise it shows (if hidden) and raises it, even if some other panel
+    // is currently overlapping it.
+    void togglePanel (FloatingPanel& panel);
+    bool isPanelFrontmost (const FloatingPanel& panel) const;
+    void updatePanelTabStates();
+
     AppContext context;
     FableLookAndFeel lookAndFeel;
 
@@ -62,6 +70,14 @@ private:
     FloatingPanel pianoRollPanel   { "Piano Roll",   std::make_unique<PianoRollPanel> (context) };
     FloatingPanel playlistPanel    { "Playlist",     std::make_unique<PlaylistPanel> (context) };
     FloatingPanel mixerPanel       { "Mixer",        std::make_unique<MixerPanel> (context) };
+
+    // FL-style tab bar: one button per panel that always raises it to front,
+    // rather than the old View-menu checkbox that just hid an already-open
+    // panel if it happened to be behind another one.
+    juce::TextButton playlistTabButton    { "Playlist" };
+    juce::TextButton channelRackTabButton { "Channel Rack" };
+    juce::TextButton pianoRollTabButton   { "Piano Roll" };
+    juce::TextButton mixerTabButton       { "Mixer" };
 
     std::vector<std::unique_ptr<PluginWindow>> pluginWindows;
     std::unique_ptr<juce::FileChooser> chooser;

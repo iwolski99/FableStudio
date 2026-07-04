@@ -47,6 +47,14 @@ void ChannelNode::setPluginGenerator (std::unique_ptr<juce::AudioPluginInstance>
 
 void ChannelNode::prepare (double sampleRate, int maxBlockSize)
 {
+    // A node can be re-prepared while already prepared (device restart after
+    // changing the sample rate/buffer size, or an offline render reusing a
+    // node built for the live device). Hosted VST3 instruments require
+    // releaseResources() before a second prepareToPlay(); skipping it crashed
+    // real-world plugins during WAV export.
+    if (plugin != nullptr && prepared)
+        plugin->releaseResources();
+
     preparedRate      = sampleRate;
     preparedBlockSize = maxBlockSize;
     prepared          = true;

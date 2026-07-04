@@ -371,11 +371,23 @@ public:
             return;
         }
 
-        if (e.mods.isCtrlDown() && e.mods.isLeftButtonDown() && draggedIndex >= 0)
+        if (e.mods.isCtrlDown() && e.mods.isLeftButtonDown())
         {
-            toggleMuteAt (e.getPosition());
+            if (draggedIndex >= 0)
+            {
+                toggleMuteAt (e.getPosition());
+            }
+            else
+            {
+                // Ctrl+drag on empty space box-selects, like FL, so a
+                // selection can be duplicated (Ctrl+B/Ctrl+D) as a group.
+                selecting = true;
+                selectionStart = e.getPosition();
+                updateSelectionRect (e.getPosition());
+            }
             draggedIndex = -1;
             draggedKind = DragKind::none;
+            repaint();
             return;
         }
 
@@ -507,7 +519,8 @@ public:
             return false;
         }
 
-        if (key == juce::KeyPress ('d', juce::ModifierKeys::ctrlModifier, 0))
+        if (key == juce::KeyPress ('d', juce::ModifierKeys::ctrlModifier, 0)
+            || key == juce::KeyPress ('b', juce::ModifierKeys::ctrlModifier, 0))
         {
             cloneSelectionOrHovered();
             return true;

@@ -53,6 +53,14 @@ void MixerBus::clearSlot (int slotIndex)
 
 void MixerBus::prepare (double sampleRate, int maxBlockSize)
 {
+    // See the matching comment in ChannelNode::prepare: re-preparing an
+    // already-prepared VST3 effect without releasing it first crashed real
+    // plugins (hit on every offline render, since buses persist across it).
+    if (prepared)
+        for (auto& slot : slots)
+            if (slot.plugin != nullptr)
+                slot.plugin->releaseResources();
+
     preparedRate      = sampleRate;
     preparedBlockSize = maxBlockSize;
     prepared          = true;

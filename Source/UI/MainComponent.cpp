@@ -46,6 +46,16 @@ MainComponent::MainComponent()
     for (auto* panel : { &channelRackPanel, &pianoRollPanel, &playlistPanel, &mixerPanel })
         workspace.addAndMakeVisible (*panel);
 
+    for (auto entry : { std::pair<juce::TextButton*, FloatingPanel*> { &playlistTabButton,    &playlistPanel },
+                       std::pair<juce::TextButton*, FloatingPanel*> { &channelRackTabButton, &channelRackPanel },
+                       std::pair<juce::TextButton*, FloatingPanel*> { &pianoRollTabButton,   &pianoRollPanel },
+                       std::pair<juce::TextButton*, FloatingPanel*> { &mixerTabButton,       &mixerPanel } })
+    {
+        entry.first->setClickingTogglesState (false);
+        entry.first->onClick = [this, panel = entry.second] { togglePanel (*panel); };
+        addAndMakeVisible (*entry.first);
+    }
+
     // start the engine with the demo project so first launch makes sound
     context.project = createDefaultProject();
     context.selectedChannelId = context.project.channels.empty() ? -1
@@ -91,6 +101,15 @@ void MainComponent::resized()
     auto area = getLocalBounds();
     menuBar.setBounds (area.removeFromTop (26));
     transport.setBounds (area.removeFromTop (44));
+
+    auto tabRow = area.removeFromTop (30);
+    int tabX = tabRow.getX() + 6;
+    for (auto* b : { &playlistTabButton, &channelRackTabButton, &pianoRollTabButton, &mixerTabButton })
+    {
+        b->setBounds (tabX, tabRow.getY() + 3, 108, tabRow.getHeight() - 6);
+        tabX += 114;
+    }
+
     browser.setBounds (area.removeFromLeft (230));
     workspace.setBounds (area);
 
@@ -110,23 +129,15 @@ void MainComponent::resized()
 
 bool MainComponent::keyPressed (const juce::KeyPress& key)
 {
-    auto toggle = [] (FloatingPanel& panel)
-    {
-        if (panel.isVisible())
-            panel.setVisible (false);
-        else
-            panel.toFrontAndShow();
-    };
-
     if (key == juce::KeyPress::spaceKey)
     {
         context.engine.isPlaying() ? context.engine.stop() : context.engine.play();
         return true;
     }
-    if (key == juce::KeyPress::F5Key)  { toggle (playlistPanel);    return true; }
-    if (key == juce::KeyPress::F6Key)  { toggle (channelRackPanel); return true; }
-    if (key == juce::KeyPress::F7Key)  { toggle (pianoRollPanel);   return true; }
-    if (key == juce::KeyPress::F9Key)  { toggle (mixerPanel);       return true; }
+    if (key == juce::KeyPress::F5Key)  { togglePanel (playlistPanel);    return true; }
+    if (key == juce::KeyPress::F6Key)  { togglePanel (channelRackPanel); return true; }
+    if (key == juce::KeyPress::F7Key)  { togglePanel (pianoRollPanel);   return true; }
+    if (key == juce::KeyPress::F9Key)  { togglePanel (mixerPanel);       return true; }
     if (key == juce::KeyPress ('l', juce::ModifierKeys(), 0))
     {
         context.engine.setSongMode (! context.engine.isSongMode());
@@ -181,14 +192,6 @@ juce::PopupMenu MainComponent::getMenuForIndex (int, const juce::String& menuNam
 
 void MainComponent::menuItemSelected (int menuItemID, int)
 {
-    auto toggle = [] (FloatingPanel& panel)
-    {
-        if (panel.isVisible())
-            panel.setVisible (false);
-        else
-            panel.toFrontAndShow();
-    };
-
     switch (menuItemID)
     {
         case menuIds::fileNew:    newProject(); break;
@@ -203,10 +206,10 @@ void MainComponent::menuItemSelected (int menuItemID, int)
                                       showStatus ("Scanning VST3 folders in the background...");
                                       break;
 
-        case menuIds::viewPlaylist:    toggle (playlistPanel); break;
-        case menuIds::viewChannelRack: toggle (channelRackPanel); break;
-        case menuIds::viewPianoRoll:   toggle (pianoRollPanel); break;
-        case menuIds::viewMixer:       toggle (mixerPanel); break;
+        case menuIds::viewPlaylist:    togglePanel (playlistPanel); break;
+        case menuIds::viewChannelRack: togglePanel (channelRackPanel); break;
+        case menuIds::viewPianoRoll:   togglePanel (pianoRollPanel); break;
+        case menuIds::viewMixer:       togglePanel (mixerPanel); break;
 
         case menuIds::helpAbout:
             juce::AlertWindow::showMessageBoxAsync (juce::MessageBoxIconType::InfoIcon,
@@ -445,6 +448,30 @@ void MainComponent::timerCallback()
         statusMessage.clear();
         repaint();
     }
+    updatePanelTabStates();
+}
+
+bool MainComponent::isPanelFrontmost (const FloatingPanel& panel) const
+{
+    return panel.isVisible()
+        && workspace.getIndexOfChildComponent (&panel) == workspace.getNumChildComponents() - 1;
+}
+
+void MainComponent::togglePanel (FloatingPanel& panel)
+{
+    if (isPanelFrontmost (panel))
+        panel.setVisible (false);
+    else
+        panel.toFrontAndShow();
+    updatePanelTabStates();
+}
+
+void MainComponent::updatePanelTabStates()
+{
+    playlistTabButton.setToggleState    (isPanelFrontmost (playlistPanel),    juce::dontSendNotification);
+    channelRackTabButton.setToggleState (isPanelFrontmost (channelRackPanel), juce::dontSendNotification);
+    pianoRollTabButton.setToggleState   (isPanelFrontmost (pianoRollPanel),   juce::dontSendNotification);
+    mixerTabButton.setToggleState       (isPanelFrontmost (mixerPanel),       juce::dontSendNotification);
 }
 
 } // namespace fable

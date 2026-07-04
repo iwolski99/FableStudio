@@ -275,11 +275,12 @@ public:
             resizing = onEdge;
             dragOffsetTicks = (int) xToTick (e.getPosition().x) - (*notes)[(size_t) draggedIndex].startTick;
 
-            if (! resizing && selectedNotes.count (draggedIndex) > 0 && selectedNotes.size() > 1)
+            if (selectedNotes.count (draggedIndex) > 0 && selectedNotes.size() > 1)
             {
                 draggingSelectionGroup = true;
                 dragGroupLeadStartTick = (*notes)[(size_t) draggedIndex].startTick;
                 dragGroupLeadPitch = (*notes)[(size_t) draggedIndex].pitch;
+                dragGroupLeadLength = (*notes)[(size_t) draggedIndex].lengthTicks;
                 for (int i : selectedNotes)
                     if (i >= 0 && i < (int) notes->size())
                         dragGroupSnapshot.push_back ({ i, (*notes)[(size_t) i] });
@@ -317,6 +318,15 @@ public:
                                             (((int) xToTick (e.getPosition().x) + snap / 2) / snap) * snap);
             n.lengthTicks = endTick - n.startTick;
             lastLength = n.lengthTicks;
+
+            if (draggingSelectionGroup)
+            {
+                const int lengthDelta = n.lengthTicks - dragGroupLeadLength;
+                for (auto& entry : dragGroupSnapshot)
+                    if (entry.first != draggedIndex && entry.first >= 0 && entry.first < (int) notes->size())
+                        (*notes)[(size_t) entry.first].lengthTicks =
+                            juce::jmax (snap / 2, entry.second.lengthTicks + lengthDelta);
+            }
         }
         else
         {
@@ -460,7 +470,8 @@ public:
             return true;
         }
 
-        if (key == juce::KeyPress ('d', juce::ModifierKeys::ctrlModifier, 0))
+        if (key == juce::KeyPress ('d', juce::ModifierKeys::ctrlModifier, 0)
+            || key == juce::KeyPress ('b', juce::ModifierKeys::ctrlModifier, 0))
         {
             cloneSelectedOrHovered();
             return true;
@@ -669,6 +680,7 @@ public:
     bool draggingSelectionGroup = false;
     int dragGroupLeadStartTick = 0;
     int dragGroupLeadPitch = kDefaultRootNote;
+    int dragGroupLeadLength = kTicksPerStep;
     std::vector<std::pair<int, Note>> dragGroupSnapshot;
 
 private:
