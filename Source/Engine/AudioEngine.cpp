@@ -1,8 +1,103 @@
 #include "AudioEngine.h"
 #include "DrumSynthesis.h"
+#include <cmath>
 
 namespace fable
 {
+
+namespace
+{
+    void mixAudioClipRange (const PlaybackData& data, double bpm,
+                            double fromTick, double toTick,
+                            double ticksPerSample, double blockStartTick,
+                            double sampleRate,
+                            std::vector<std::shared_ptr<MixerBus>>& buses)
+    {
+        const double samplesPerTick = 60.0 / (juce::jmax (1.0, bpm) * kPPQ);
+
+        for (const auto& clip : data.audioClips)
+        {
+            if (clip.startTick >= toTick || clip.endTick() <= fromTick)
+                continue;
+
+            if (clip.audio.getNumSamples() <= 0 || clip.sourceRate <= 0.0)
+                continue;
+
+            const double overlapStartTick = juce::jmax (fromTick, (double) clip.startTick);
+            const double overlapEndTick   = juce::jmin (toTick,   (double) clip.endTick());
+            const int destStartSample = juce::jmax (0, (int) ((overlapStartTick - blockStartTick) / ticksPerSample));
+            auto& targetBus = *buses[(size_t) juce::jlimit (0, (int) buses.size() - 1, clip.mixerTrack)];
+            auto& output = targetBus.buffer;
+            const int destEndSample   = juce::jmin (output.getNumSamples(),
+                                                    (int) std::ceil ((overlapEndTick - blockStartTick) / ticksPerSample));
+            const int count = destEndSample - destStartSample;
+            if (count <= 0)
+                continue;
+
+            const double clipStartSeconds   = (overlapStartTick - clip.startTick) * samplesPerTick;
+            double sourceSamplePosition = clipStartSeconds * clip.sourceRate;
+            const double sourceAdvance  = clip.sourceRate / sampleRate;
+
+            for (int i = 0; i < count; ++i)
+            {
+                const int srcIndex = (int) sourceSamplePosition;
+                if (srcIndex >= clip.audio.getNumSamples())
+                    break;
+
+                const float frac = (float) (sourceSamplePosition - srcIndex);
+                const int srcNext = juce::jmin (srcIndex + 1, clip.audio.getNumSamples() - 1);
+
+                const float left = clip.audio.getSample (0, srcIndex)
+                                 + frac * (clip.audio.getSample (0, srcNext) - clip.audio.getSample (0, srcIndex));
+                const float right = clip.audio.getNumChannels() > 1
+                    ? clip.audio.getSample (1, srcIndex)
+                      + frac * (clip.audio.getSample (1, srcNext) - clip.audio.getSample (1, srcIndex))
+                    : left;
+
+                output.addSample (0, destStartSample + i, left);
+                if (output.getNumChannels() > 1)
+                    output.addSample (1, destStartSample + i, right);
+
+                sourceSamplePosition += sourceAdvance;
+            }
+        }
+    }
+
+    void mixSongAudioClipsForBlock (const PlaybackData& data, double bpm,
+                                    double blockStartTick, double sampleRate, int numSamples,
+                                    std::vector<std::shared_ptr<MixerBus>>& buses)
+    {
+        if (data.audioClips.empty())
+            return;
+
+        const double ticksPerSample = bpm * kPPQ / (60.0 * sampleRate);
+        const double blockTicks     = ticksPerSample * numSamples;
+        const int loopLen = juce::jmax (1, data.songLengthTicks);
+
+        double positionTicks = blockStartTick;
+        if (positionTicks >= loopLen)
+            positionTicks = std::fmod (positionTicks, (double) loopLen);
+
+        double remaining      = blockTicks;
+        double blockTickBase  = positionTicks;
+
+        while (remaining > 1.0e-9)
+        {
+            const double span = juce::jmin (remaining, (double) loopLen - positionTicks);
+            mixAudioClipRange (data, bpm, positionTicks, positionTicks + span,
+                               ticksPerSample, blockTickBase, sampleRate, buses);
+
+            positionTicks += span;
+            remaining     -= span;
+
+            if (positionTicks >= loopLen - 1.0e-9)
+            {
+                positionTicks = 0.0;
+                blockTickBase -= loopLen;
+            }
+        }
+    }
+}
 
 // Routes sequencer events into the matching channel node's MIDI buffer.
 class AudioEngine::SinkAdapter : public MidiSink
@@ -237,7 +332,7 @@ juce::StringArray AudioEngine::syncWithProject (Project& project)
         bus.updateFromModel (model);
     }
 
-    newSet->playback = compilePlayback (project);
+    newSet->playback = compilePlayback (project, formatManager);
     publishRenderSet (std::move (newSet));
     return errors;
 }
@@ -260,7 +355,7 @@ void AudioEngine::updateMixerParams (const Project& project)
 void AudioEngine::updatePlayback (const Project& project)
 {
     auto next = std::make_shared<RenderSet> (*copyRenderSet());
-    next->playback = compilePlayback (project);
+    next->playback = compilePlayback (project, formatManager);
     publishRenderSet (std::move (next));
 }
 
@@ -359,6 +454,9 @@ void AudioEngine::processBlock (juce::AudioBuffer<float>& output)
         return;
 
     SinkAdapter sink (*set);
+    double audioClipBlockStartTick = sequencer.getPositionTicks();
+    bool shouldMixSongAudio = false;
+    double mixBpm = bpm.load();
 
     if (stopRequest.exchange (false))
     {
@@ -398,6 +496,9 @@ void AudioEngine::processBlock (juce::AudioBuffer<float>& output)
         t.songMode     = songMode.load();
         t.patternIndex = currentPattern.load();
         t.bpm          = bpm.load();
+        audioClipBlockStartTick = sequencer.getPositionTicks();
+        shouldMixSongAudio = t.songMode;
+        mixBpm = t.bpm;
         playheadTicks.store (sequencer.process (*set->playback, t, currentSampleRate, numSamples, sink));
     }
 
@@ -407,6 +508,10 @@ void AudioEngine::processBlock (juce::AudioBuffer<float>& output)
         bus->buffer.clear (0, 0, juce::jmin (numSamples, bus->buffer.getNumSamples()));
         bus->buffer.clear (1, 0, juce::jmin (numSamples, bus->buffer.getNumSamples()));
     }
+
+    if (shouldMixSongAudio && set->playback != nullptr)
+        mixSongAudioClipsForBlock (*set->playback, mixBpm, audioClipBlockStartTick, currentSampleRate,
+                                   numSamples, set->buses);
 
     for (auto& node : set->channels)
     {

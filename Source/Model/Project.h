@@ -103,6 +103,18 @@ struct PlaylistClip
     int endTick() const { return startTick + lengthTicks; }
 };
 
+struct AudioClip
+{
+    juce::String filePath;
+    juce::String name;
+    int mixerTrack  = 0;   // 0 = master, 1..16 = inserts
+    int track       = 0;   // playlist lane
+    int startTick   = 0;   // absolute song position
+    int lengthTicks = kTicksPerBar;
+
+    int endTick() const { return startTick + lengthTicks; }
+};
+
 enum class EffectType { none, reverb, delay, eq3, limiter, plugin };
 
 struct EffectSlot
@@ -134,6 +146,7 @@ struct Project
     std::vector<Channel>  channels;
     std::vector<Pattern>  patterns;
     std::vector<PlaylistClip> clips;
+    std::vector<AudioClip>    audioClips;
     std::array<MixerTrackModel, kNumMixerTracks> mixerTracks;
 
     int nextChannelId = 1;

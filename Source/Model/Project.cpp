@@ -73,6 +73,8 @@ int Project::songLengthTicks() const
     int len = 0;
     for (auto& c : clips)
         len = juce::jmax (len, c.endTick());
+    for (auto& c : audioClips)
+        len = juce::jmax (len, c.endTick());
     return len;
 }
 

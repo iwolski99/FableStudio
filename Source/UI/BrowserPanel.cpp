@@ -3,6 +3,22 @@
 namespace fable
 {
 
+class BrowserPanel::SampleFileTree : public juce::FileTreeComponent
+{
+public:
+    SampleFileTree (juce::DirectoryContentsList& list, BrowserPanel& ownerToUse)
+        : juce::FileTreeComponent (list), owner (ownerToUse) {}
+
+    void mouseDrag (const juce::MouseEvent& e) override
+    {
+        owner.startFileDrag();
+        juce::FileTreeComponent::mouseDrag (e);
+    }
+
+private:
+    BrowserPanel& owner;
+};
+
 BrowserPanel::BrowserPanel (AppContext& ctx) : context (ctx)
 {
     for (auto* header : { &pluginsHeader, &samplesHeader })
@@ -24,7 +40,7 @@ BrowserPanel::BrowserPanel (AppContext& ctx) : context (ctx)
     dirContents = std::make_unique<juce::DirectoryContentsList> (fileFilter.get(), scanThread);
     dirContents->setDirectory (juce::File::getSpecialLocation (juce::File::userHomeDirectory), true, true);
 
-    fileTree = std::make_unique<juce::FileTreeComponent> (*dirContents);
+    fileTree = std::make_unique<SampleFileTree> (*dirContents, *this);
     fileTree->addListener (this);
     fileTree->setColour (juce::TreeView::backgroundColourId, colours::panelDark);
     addAndMakeVisible (*fileTree);
@@ -52,6 +68,19 @@ void BrowserPanel::refreshPlugins()
 void BrowserPanel::changeListenerCallback (juce::ChangeBroadcaster*)
 {
     refreshPlugins();
+}
+
+void BrowserPanel::startFileDrag()
+{
+    if (fileTree == nullptr || fileTree->getNumSelectedFiles() <= 0)
+        return;
+
+    const auto file = fileTree->getSelectedFile (0);
+    if (! context.isSupportedAudioFile (file))
+        return;
+
+    if (auto* drag = juce::DragAndDropContainer::findParentDragContainerFor (this))
+        drag->startDragging ("audiofile:" + file.getFullPathName(), this);
 }
 
 int BrowserPanel::getNumRows()
@@ -134,10 +163,7 @@ void BrowserPanel::fileDoubleClicked (const juce::File& file)
         return;
     }
 
-    const int id = context.project.addChannel (GeneratorType::sampler,
-                                               file.getFileNameWithoutExtension());
-    context.project.channelById (id)->samplePath = file.getFullPathName();
-    context.structureChanged();
+    context.addSamplerChannelFromFile (file);
     if (context.showStatusMessage)
         context.showStatusMessage ("Added sampler channel: " + file.getFileName());
 }

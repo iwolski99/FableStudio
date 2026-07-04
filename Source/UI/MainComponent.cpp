@@ -22,6 +22,10 @@ MainComponent::MainComponent()
 
     context.openPluginEditor = [this] (juce::AudioPluginInstance* instance, const juce::String& title)
     { openPluginEditor (instance, title); };
+    context.showPianoRoll = [this]
+    {
+        pianoRollPanel.toFrontAndShow();
+    };
     context.showStatusMessage = [this] (const juce::String& message) { showStatus (message); };
 
     menuBar.setModel (this);

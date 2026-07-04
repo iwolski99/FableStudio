@@ -20,6 +20,7 @@ namespace fable
 // over the workspace.
 
 class MainComponent : public juce::Component,
+                      public juce::DragAndDropContainer,
                       public juce::MenuBarModel,
                       private juce::Timer
 {

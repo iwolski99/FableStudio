@@ -106,4 +106,9 @@ juce::AudioBuffer<float> loadSampleFile (const juce::File& file,
                                          juce::AudioFormatManager& formats,
                                          double& sourceRateOut);
 
+// Loads an audio file for playlist clip playback, preserving mono/stereo.
+juce::AudioBuffer<float> loadAudioClipFile (const juce::File& file,
+                                            juce::AudioFormatManager& formats,
+                                            double& sourceRateOut);
+
 } // namespace fable

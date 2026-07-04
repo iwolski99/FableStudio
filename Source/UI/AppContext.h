@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cmath>
 #include <juce_gui_basics/juce_gui_basics.h>
 
 #include "../Engine/AudioEngine.h"
@@ -33,6 +34,7 @@ struct AppContext
 
     // Set by MainComponent
     std::function<void (juce::AudioPluginInstance*, const juce::String& title)> openPluginEditor;
+    std::function<void()> showPianoRoll;
     std::function<void (const juce::String&)> showStatusMessage;
 
     Pattern* selectedPattern()
@@ -66,12 +68,69 @@ struct AppContext
     void channelParamsChanged() { dirty = true; engine.updateChannelParams (project); }
     void mixerParamsChanged()   { dirty = true; engine.updateMixerParams (project); }
 
+    void selectChannel (int channelId)
+    {
+        selectedChannelId = channelId;
+        structureBroadcaster.sendChangeMessage();
+        contentBroadcaster.sendChangeMessage();
+    }
+
     void selectPattern (int index)
     {
         selectedPatternIndex = juce::jlimit (0, juce::jmax (0, (int) project.patterns.size() - 1), index);
         engine.setCurrentPattern (selectedPatternIndex);
         structureBroadcaster.sendChangeMessage();
         contentBroadcaster.sendChangeMessage();
+    }
+
+    void openPianoRollForChannel (int channelId)
+    {
+        if (project.channelById (channelId) == nullptr)
+            return;
+
+        selectChannel (channelId);
+        if (showPianoRoll)
+            showPianoRoll();
+    }
+
+    bool isSupportedAudioFile (const juce::File& file)
+    {
+        if (! file.existsAsFile() || file.hasFileExtension ("fable"))
+            return false;
+        return engine.getFormatManager().createReaderFor (file) != nullptr;
+    }
+
+    int estimateAudioFileLengthTicks (const juce::File& file)
+    {
+        std::unique_ptr<juce::AudioFormatReader> reader (engine.getFormatManager().createReaderFor (file));
+        if (reader == nullptr || reader->lengthInSamples <= 0 || reader->sampleRate <= 0.0)
+            return kTicksPerBar;
+
+        const double seconds = (double) reader->lengthInSamples / reader->sampleRate;
+        return juce::jmax (1, (int) std::round (seconds * project.bpm * kPPQ / 60.0));
+    }
+
+    int addSamplerChannelFromFile (const juce::File& file)
+    {
+        const int id = project.addChannel (GeneratorType::sampler, file.getFileNameWithoutExtension());
+        if (auto* c = project.channelById (id))
+            c->samplePath = file.getFullPathName();
+        selectedChannelId = id;
+        structureChanged();
+        return id;
+    }
+
+    void addAudioClipFromFile (const juce::File& file, int track, int startTick)
+    {
+        AudioClip clip;
+        clip.filePath    = file.getFullPathName();
+        clip.name        = file.getFileNameWithoutExtension();
+        clip.mixerTrack  = 0;
+        clip.track       = track;
+        clip.startTick   = startTick;
+        clip.lengthTicks = estimateAudioFileLengthTicks (file);
+        project.audioClips.push_back (std::move (clip));
+        contentChanged();
     }
 };
 

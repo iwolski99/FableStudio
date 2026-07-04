@@ -7,11 +7,13 @@
 namespace fable
 {
 
-// Playlist: arrange pattern clips on tracks along a bar timeline.
+// Playlist: arrange pattern clips and audio clips on tracks along a bar timeline.
 // Left-click paints the selected pattern, drag moves, right edge resizes,
-// right-click deletes. Playhead shown in song mode.
+// right-click deletes, and browser-dragged samples become audio clips.
+// Playhead shown in song mode.
 
 class PlaylistPanel : public juce::Component,
+                      public juce::DragAndDropTarget,
                       private juce::ChangeListener,
                       private juce::Timer
 {
@@ -21,18 +23,28 @@ public:
 
     void paint (juce::Graphics&) override;
     void resized() override;
+    bool isInterestedInDragSource (const SourceDetails& dragSourceDetails) override;
+    void itemDragEnter (const SourceDetails& dragSourceDetails) override;
+    void itemDragMove (const SourceDetails& dragSourceDetails) override;
+    void itemDragExit (const SourceDetails& dragSourceDetails) override;
+    void itemDropped (const SourceDetails& dragSourceDetails) override;
 
 private:
     class ClipArea;
+    class WaveformCache;
 
     void changeListenerCallback (juce::ChangeBroadcaster*) override;
     void timerCallback() override;
+    void refreshHeader();
 
     AppContext& context;
     juce::Label hintLabel;
-    juce::ComboBox snapBox;
+    juce::ComboBox patternBox, snapBox;
     juce::Viewport viewport;
     std::unique_ptr<ClipArea> clipArea;
+    std::unique_ptr<WaveformCache> waveformCache;
+    bool dragActive = false;
+    juce::Point<int> dragPosition;
 
     friend class ClipArea;
 

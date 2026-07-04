@@ -9,8 +9,10 @@ namespace fable
 
 // Channel Rack: pattern selector on top, one row per channel with mute LED,
 // pan/volume knobs, name button and a step grid grouped in beats of four.
+// Audio files dragged from the Browser become new sampler channels.
 
 class ChannelRackPanel : public juce::Component,
+                         public juce::DragAndDropTarget,
                          private juce::ChangeListener,
                          private juce::Timer
 {
@@ -20,6 +22,10 @@ public:
 
     void paint (juce::Graphics&) override;
     void resized() override;
+    bool isInterestedInDragSource (const SourceDetails& dragSourceDetails) override;
+    void itemDragEnter (const SourceDetails& dragSourceDetails) override;
+    void itemDragExit (const SourceDetails& dragSourceDetails) override;
+    void itemDropped (const SourceDetails& dragSourceDetails) override;
 
 private:
     class ChannelRow;
@@ -35,6 +41,7 @@ private:
     juce::Viewport viewport;
     juce::Component rowHolder;
     std::vector<std::unique_ptr<ChannelRow>> rows;
+    bool dragActive = false;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ChannelRackPanel)
 };

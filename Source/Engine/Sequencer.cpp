@@ -1,9 +1,18 @@
 #include "Sequencer.h"
+#include "SamplerSound.h"
 
 namespace fable
 {
 
 std::shared_ptr<const PlaybackData> compilePlayback (const Project& p)
+{
+    juce::AudioFormatManager formats;
+    formats.registerBasicFormats();
+    return compilePlayback (p, formats);
+}
+
+std::shared_ptr<const PlaybackData> compilePlayback (const Project& p,
+                                                     juce::AudioFormatManager& formats)
 {
     auto data = std::make_shared<PlaybackData>();
 
@@ -59,8 +68,30 @@ std::shared_ptr<const PlaybackData> compilePlayback (const Project& p)
     std::sort (data->clips.begin(), data->clips.end(),
                [] (const CompiledClip& a, const CompiledClip& b) { return a.startTick < b.startTick; });
 
+    for (auto& c : p.audioClips)
+    {
+        if (c.filePath.isEmpty())
+            continue;
+
+        CompiledAudioClip clip;
+        clip.name       = c.name;
+        clip.filePath   = c.filePath;
+        clip.mixerTrack = c.mixerTrack;
+        clip.track      = c.track;
+        clip.startTick  = c.startTick;
+        clip.lengthTicks = c.lengthTicks;
+        clip.audio      = loadAudioClipFile (juce::File (c.filePath), formats, clip.sourceRate);
+        if (clip.audio.getNumSamples() > 0)
+            data->audioClips.push_back (std::move (clip));
+    }
+
+    std::sort (data->audioClips.begin(), data->audioClips.end(),
+               [] (const CompiledAudioClip& a, const CompiledAudioClip& b) { return a.startTick < b.startTick; });
+
     int songLen = 0;
     for (auto& c : data->clips)
+        songLen = juce::jmax (songLen, c.endTick());
+    for (auto& c : data->audioClips)
         songLen = juce::jmax (songLen, c.endTick());
     data->songLengthTicks = juce::jmax (kTicksPerBar,
                                         ((songLen + kTicksPerBar - 1) / kTicksPerBar) * kTicksPerBar);

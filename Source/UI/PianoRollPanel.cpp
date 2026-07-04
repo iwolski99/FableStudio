@@ -372,9 +372,7 @@ PianoRollPanel::PianoRollPanel (AppContext& ctx) : context (ctx)
         const int index = channelBox.getSelectedItemIndex();
         if (index >= 0 && index < (int) context.project.channels.size())
         {
-            context.selectedChannelId = context.project.channels[(size_t) index].id;
-            grid->repaint();
-            velocityLane->repaint();
+            context.selectChannel (context.project.channels[(size_t) index].id);
         }
     };
     addAndMakeVisible (channelBox);

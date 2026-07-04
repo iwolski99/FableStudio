@@ -1,6 +1,7 @@
 #pragma once
 
 #include <juce_audio_basics/juce_audio_basics.h>
+#include <juce_audio_formats/juce_audio_formats.h>
 #include "../Model/Project.h"
 
 namespace fable
@@ -33,15 +34,28 @@ struct CompiledClip
     int endTick() const { return startTick + lengthTicks; }
 };
 
+struct CompiledAudioClip
+{
+    juce::String name, filePath;
+    int startTick = 0, lengthTicks = 0, track = 0, mixerTrack = 0;
+    double sourceRate = 44100.0;
+    juce::AudioBuffer<float> audio;
+
+    int endTick() const { return startTick + lengthTicks; }
+};
+
 struct PlaybackData
 {
     std::vector<CompiledPattern> patterns;
     std::vector<CompiledClip>    clips;     // sorted by startTick
+    std::vector<CompiledAudioClip> audioClips;
     int songLengthTicks = kTicksPerBar;     // rounded up to a whole bar
 };
 
 // Builds a snapshot from the project (applies swing, merges steps + notes).
 std::shared_ptr<const PlaybackData> compilePlayback (const Project& p);
+std::shared_ptr<const PlaybackData> compilePlayback (const Project& p,
+                                                     juce::AudioFormatManager& formats);
 
 // ---------------------------------------------------------------------------
 // Audio-thread sequencer state. Emits MIDI into per-channel buffers with

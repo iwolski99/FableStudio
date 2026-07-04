@@ -9,7 +9,8 @@ namespace fable
 
 // Left dock: discovered VST3 plugins on top, a sample-file browser below.
 // Double-click an instrument to add it as a channel; double-click an audio
-// file to add a sampler channel playing it.
+// file to add a sampler channel, or drag samples into the Channel Rack /
+// Playlist.
 
 class BrowserPanel : public juce::Component,
                      private juce::ChangeListener,
@@ -24,6 +25,8 @@ public:
     void resized() override;
 
 private:
+    class SampleFileTree;
+
     // ListBoxModel (plugins)
     int getNumRows() override;
     void paintListBoxItem (int row, juce::Graphics&, int width, int height, bool selected) override;
@@ -37,6 +40,7 @@ private:
 
     void changeListenerCallback (juce::ChangeBroadcaster*) override;
     void refreshPlugins();
+    void startFileDrag();
 
     AppContext& context;
     juce::Label pluginsHeader { {}, "PLUGINS" }, samplesHeader { {}, "FILES" };
@@ -46,7 +50,7 @@ private:
     juce::TimeSliceThread scanThread { "file browser" };
     std::unique_ptr<juce::WildcardFileFilter> fileFilter;
     std::unique_ptr<juce::DirectoryContentsList> dirContents;
-    std::unique_ptr<juce::FileTreeComponent> fileTree;
+    std::unique_ptr<SampleFileTree> fileTree;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (BrowserPanel)
 };

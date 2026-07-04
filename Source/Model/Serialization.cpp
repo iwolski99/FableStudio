@@ -45,7 +45,7 @@ juce::var projectToVar (const Project& p)
 {
     auto root = obj();
     root->setProperty ("app", "FableStudio");
-    root->setProperty ("version", 1);
+    root->setProperty ("version", 2);
     root->setProperty ("name", p.name);
     root->setProperty ("bpm", p.bpm);
     root->setProperty ("swing", p.swing);
@@ -120,6 +120,20 @@ juce::var projectToVar (const Project& p)
         clips.add (o.get());
     }
     root->setProperty ("clips", clips);
+
+    juce::Array<juce::var> audioClips;
+    for (auto& c : p.audioClips)
+    {
+        auto o = obj();
+        o->setProperty ("file", c.filePath);
+        o->setProperty ("name", c.name);
+        o->setProperty ("mixerTrack", c.mixerTrack);
+        o->setProperty ("track", c.track);
+        o->setProperty ("start", c.startTick);
+        o->setProperty ("length", c.lengthTicks);
+        audioClips.add (o.get());
+    }
+    root->setProperty ("audioClips", audioClips);
 
     juce::Array<juce::var> tracks;
     for (auto& t : p.mixerTracks)
@@ -240,6 +254,22 @@ bool projectFromVar (const juce::var& v, Project& out)
             c.lengthTicks  = juce::jmax (1, (int) cv["length"]);
             if (c.patternIndex >= 0 && c.patternIndex < (int) p.patterns.size())
                 p.clips.push_back (c);
+        }
+    }
+
+    if (auto* audioClips = v["audioClips"].getArray())
+    {
+        for (auto& cv : *audioClips)
+        {
+            AudioClip c;
+            c.filePath    = cv["file"].toString();
+            c.name        = cv["name"].toString();
+            c.mixerTrack  = juce::jlimit (0, kNumMixerTracks - 1, (int) cv["mixerTrack"]);
+            c.track       = juce::jmax (0, (int) cv["track"]);
+            c.startTick   = juce::jmax (0, (int) cv["start"]);
+            c.lengthTicks = juce::jmax (1, (int) cv["length"]);
+            if (c.filePath.isNotEmpty())
+                p.audioClips.push_back (std::move (c));
         }
     }
 

@@ -7,6 +7,14 @@ static constexpr int kRowHeight  = 30;
 static constexpr int kLeftWidth  = 224;   // led + knobs + name
 static constexpr int kStepSize   = 24;
 
+static juce::File audioFileFromDragDescription (const juce::var& description)
+{
+    const auto text = description.toString();
+    if (! text.startsWith ("audiofile:"))
+        return {};
+    return juce::File (text.fromFirstOccurrenceOf ("audiofile:", false, false));
+}
+
 // ------------------------------------------------------------------ row
 
 class ChannelRackPanel::ChannelRow : public juce::Component
@@ -65,8 +73,7 @@ public:
         nameButton.setColour (juce::TextButton::textColourOffId, colours::text);
         nameButton.onClick = [this]
         {
-            context.selectedChannelId = channelId;
-            context.structureBroadcaster.sendChangeMessage();
+            context.selectChannel (channelId);
             // audition on select, like clicking a channel button
             context.engine.auditionNoteOn (channelId, rootNoteOf(), 0.8f);
             juce::Timer::callAfterDelay (220, [ctx = &context, id = channelId, pitch = rootNoteOf()]
@@ -222,6 +229,11 @@ public:
             });
         }
         m.addSubMenu ("Route to mixer track", route);
+
+        m.addItem ("Go to Piano Roll", [this]
+        {
+            context.openPianoRollForChannel (channelId);
+        });
 
         if (channel->type == GeneratorType::sampler)
         {
@@ -464,6 +476,13 @@ void ChannelRackPanel::rebuildRows()
 void ChannelRackPanel::paint (juce::Graphics& g)
 {
     g.fillAll (colours::panel);
+    if (dragActive)
+    {
+        g.setColour (colours::accent.withAlpha (0.18f));
+        g.fillRoundedRectangle (getLocalBounds().toFloat().reduced (3.0f), 6.0f);
+        g.setColour (colours::accent);
+        g.drawRoundedRectangle (getLocalBounds().toFloat().reduced (3.5f), 6.0f, 2.0f);
+    }
 }
 
 void ChannelRackPanel::resized()
@@ -535,6 +554,37 @@ void ChannelRackPanel::addChannelMenu()
     }
 
     m.showMenuAsync (juce::PopupMenu::Options().withTargetComponent (header->addChannelButton));
+}
+
+bool ChannelRackPanel::isInterestedInDragSource (const SourceDetails& dragSourceDetails)
+{
+    return context.isSupportedAudioFile (audioFileFromDragDescription (dragSourceDetails.description));
+}
+
+void ChannelRackPanel::itemDragEnter (const SourceDetails&)
+{
+    dragActive = true;
+    repaint();
+}
+
+void ChannelRackPanel::itemDragExit (const SourceDetails&)
+{
+    dragActive = false;
+    repaint();
+}
+
+void ChannelRackPanel::itemDropped (const SourceDetails& dragSourceDetails)
+{
+    dragActive = false;
+    repaint();
+
+    const auto file = audioFileFromDragDescription (dragSourceDetails.description);
+    if (! context.isSupportedAudioFile (file))
+        return;
+
+    context.addSamplerChannelFromFile (file);
+    if (context.showStatusMessage)
+        context.showStatusMessage ("Added sampler channel: " + file.getFileName());
 }
 
 } // namespace fable

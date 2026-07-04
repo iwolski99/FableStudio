@@ -18,8 +18,9 @@ if(DEFINED FABLE_JUCE_SOURCE_DIR)
 else()
     FetchContent_Declare(
         JUCE
-        URL https://github.com/juce-framework/JUCE/archive/refs/tags/8.0.14.tar.gz
-        DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+        GIT_REPOSITORY https://github.com/juce-framework/JUCE.git
+        GIT_TAG 8.0.14
+        GIT_SHALLOW TRUE
     )
     FetchContent_MakeAvailable(JUCE)
 endif()
