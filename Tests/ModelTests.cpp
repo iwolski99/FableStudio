@@ -63,6 +63,19 @@ public:
             p.mixerTracks[3].slots[2].params[0] = 0.7f;
             p.mixerTracks[5].solo = true;
             p.channels[0].pluginState.append ("\x01\x02\xff", 3);
+            p.clips[0].offsetTicks = kTicksPerStep * 3;
+            p.clips[0].muted = true;
+
+            AudioClip audioClip;
+            audioClip.filePath = "/tmp/does-not-need-to-exist.wav";
+            audioClip.name = "Vocal chop";
+            audioClip.mixerTrack = 2;
+            audioClip.track = 1;
+            audioClip.startTick = kTicksPerBar;
+            audioClip.lengthTicks = kTicksPerBar * 2;
+            audioClip.sourceOffsetTicks = kTicksPerStep * 5;
+            audioClip.muted = true;
+            p.audioClips.push_back (audioClip);
 
             Project q;
             expect (projectFromJson (projectToJson (p), q));
@@ -78,6 +91,17 @@ public:
             expect (q.mixerTracks[5].solo);
             expect (q.channels[0].pluginState == p.channels[0].pluginState);
             expectEquals ((int) q.clips.size(), (int) p.clips.size());
+            expectEquals (q.clips[0].offsetTicks, kTicksPerStep * 3);
+            expect (q.clips[0].muted);
+
+            expectEquals ((int) q.audioClips.size(), 1);
+            expectEquals (q.audioClips[0].filePath, audioClip.filePath);
+            expectEquals (q.audioClips[0].mixerTrack, 2);
+            expectEquals (q.audioClips[0].track, 1);
+            expectEquals (q.audioClips[0].startTick, kTicksPerBar);
+            expectEquals (q.audioClips[0].lengthTicks, kTicksPerBar * 2);
+            expectEquals (q.audioClips[0].sourceOffsetTicks, kTicksPerStep * 5);
+            expect (q.audioClips[0].muted);
 
             // step/note data
             auto& pd = p.patterns[0].channelData;

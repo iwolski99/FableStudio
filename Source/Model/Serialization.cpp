@@ -45,7 +45,7 @@ juce::var projectToVar (const Project& p)
 {
     auto root = obj();
     root->setProperty ("app", "FableStudio");
-    root->setProperty ("version", 2);
+    root->setProperty ("version", 3);
     root->setProperty ("name", p.name);
     root->setProperty ("bpm", p.bpm);
     root->setProperty ("swing", p.swing);
@@ -117,6 +117,8 @@ juce::var projectToVar (const Project& p)
         o->setProperty ("track", c.track);
         o->setProperty ("start", c.startTick);
         o->setProperty ("length", c.lengthTicks);
+        o->setProperty ("offset", c.offsetTicks);
+        o->setProperty ("muted", c.muted);
         clips.add (o.get());
     }
     root->setProperty ("clips", clips);
@@ -131,6 +133,8 @@ juce::var projectToVar (const Project& p)
         o->setProperty ("track", c.track);
         o->setProperty ("start", c.startTick);
         o->setProperty ("length", c.lengthTicks);
+        o->setProperty ("srcOffset", c.sourceOffsetTicks);
+        o->setProperty ("muted", c.muted);
         audioClips.add (o.get());
     }
     root->setProperty ("audioClips", audioClips);
@@ -252,6 +256,8 @@ bool projectFromVar (const juce::var& v, Project& out)
             c.track        = juce::jmax (0, (int) cv["track"]);
             c.startTick    = juce::jmax (0, (int) cv["start"]);
             c.lengthTicks  = juce::jmax (1, (int) cv["length"]);
+            c.offsetTicks  = juce::jmax (0, (int) cv["offset"]);
+            c.muted        = (bool) cv["muted"];
             if (c.patternIndex >= 0 && c.patternIndex < (int) p.patterns.size())
                 p.clips.push_back (c);
         }
@@ -268,6 +274,8 @@ bool projectFromVar (const juce::var& v, Project& out)
             c.track       = juce::jmax (0, (int) cv["track"]);
             c.startTick   = juce::jmax (0, (int) cv["start"]);
             c.lengthTicks = juce::jmax (1, (int) cv["length"]);
+            c.sourceOffsetTicks = juce::jmax (0, (int) cv["srcOffset"]);
+            c.muted       = (bool) cv["muted"];
             if (c.filePath.isNotEmpty())
                 p.audioClips.push_back (std::move (c));
         }

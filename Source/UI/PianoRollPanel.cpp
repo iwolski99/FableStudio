@@ -20,7 +20,10 @@ static int   yToPitch (int y)        { return juce::jlimit (0, 127, kHighNote - 
 class PianoRollPanel::NoteGrid : public juce::Component
 {
 public:
-    explicit NoteGrid (PianoRollPanel& ownerToUse) : owner (ownerToUse) {}
+    explicit NoteGrid (PianoRollPanel& ownerToUse) : owner (ownerToUse)
+    {
+        setWantsKeyboardFocus (true);
+    }
 
     int snapTicks() const
     {
@@ -160,8 +163,25 @@ public:
         return -1;
     }
 
+    void mouseMove (const juce::MouseEvent& e) override
+    {
+        lastMousePos = e.getPosition();
+    }
+
+    void mouseEnter (const juce::MouseEvent& e) override
+    {
+        // Grab focus on hover (not just click) so keyboard shortcuts that act on
+        // "the note under the cursor" work without first having to click - a
+        // click on empty space would otherwise create a note as a side effect.
+        lastMousePos = e.getPosition();
+        grabKeyboardFocus();
+    }
+
     void mouseDown (const juce::MouseEvent& e) override
     {
+        grabKeyboardFocus();
+        lastMousePos = e.getPosition();
+
         auto* notes = owner.currentNotes();
         if (notes == nullptr)
             return;
@@ -215,6 +235,8 @@ public:
 
     void mouseDrag (const juce::MouseEvent& e) override
     {
+        lastMousePos = e.getPosition();
+
         auto* notes = owner.currentNotes();
         if (notes == nullptr || draggedIndex < 0 || draggedIndex >= (int) notes->size())
             return;
@@ -279,6 +301,58 @@ public:
         }
     }
 
+    // Keyboard shortcuts act on the note currently under the mouse cursor
+    // (there is no multi-select model in the piano roll, so these are
+    // single-note operations rather than FL's full selection-based editing).
+    bool keyPressed (const juce::KeyPress& key) override
+    {
+        auto* notes = owner.currentNotes();
+        const int code = key.getKeyCode();   // compare the raw key, independent of modifiers
+
+        if (code == juce::KeyPress::deleteKey || code == juce::KeyPress::backspaceKey)
+        {
+            bool onEdge = false;
+            const int index = notes != nullptr ? noteIndexAt (lastMousePos, onEdge) : -1;
+            if (index < 0)
+                return false;
+            notes->erase (notes->begin() + index);
+            owner.context.contentChanged();
+            repaint();
+            return true;
+        }
+
+        if (code == juce::KeyPress::upKey || code == juce::KeyPress::downKey)
+        {
+            bool onEdge = false;
+            const int index = notes != nullptr ? noteIndexAt (lastMousePos, onEdge) : -1;
+            if (index < 0)
+                return false;
+
+            const int semitones = key.getModifiers().isShiftDown() ? 12 : 1;
+            const int delta = (code == juce::KeyPress::upKey ? 1 : -1) * semitones;
+            auto& n = (*notes)[(size_t) index];
+            n.pitch = juce::jlimit (0, 127, n.pitch + delta);
+            owner.context.contentChanged();
+            repaint();
+            return true;
+        }
+
+        if (code == juce::KeyPress::homeKey)
+        {
+            owner.context.engine.setPositionTicks (0.0);
+            return true;
+        }
+        if (code == juce::KeyPress::endKey)
+        {
+            if (auto* pattern = owner.currentPattern())
+                owner.context.engine.setPositionTicks (
+                    (double) juce::jmax (0, pattern->lengthTicks() - kTicksPerStep));
+            return true;
+        }
+
+        return false;
+    }
+
     PianoRollPanel& owner;
     int draggedIndex = -1;
     int dragOffsetTicks = 0;
@@ -286,6 +360,7 @@ public:
     int previewPitch = -1;
     bool resizing = false;
     bool changedWhileDragging = false;
+    juce::Point<int> lastMousePos;
 };
 
 // ------------------------------------------------------------- velocity lane
@@ -386,7 +461,8 @@ PianoRollPanel::PianoRollPanel (AppContext& ctx) : context (ctx)
     snapBox.setSelectedId (kTicksPerStep, juce::dontSendNotification);
     addAndMakeVisible (snapBox);
 
-    hintLabel.setText ("draw: left-click   delete: right-click   resize: drag right edge",
+    hintLabel.setText ("draw: left-click   delete: right-click/Del   resize: drag right edge   "
+                       "Up/Down: transpose (Shift=octave)   Home/End: seek",
                        juce::dontSendNotification);
     hintLabel.setColour (juce::Label::textColourId, colours::textDim);
     hintLabel.setFont (juce::Font (juce::FontOptions (11.0f)));

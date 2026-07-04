@@ -62,8 +62,17 @@ std::shared_ptr<const PlaybackData> compilePlayback (const Project& p,
     }
 
     for (auto& c : p.clips)
-        if (c.patternIndex >= 0 && c.patternIndex < (int) data->patterns.size())
-            data->clips.push_back ({ c.startTick, c.lengthTicks, c.patternIndex });
+    {
+        if (c.patternIndex < 0 || c.patternIndex >= (int) data->patterns.size())
+            continue;
+        CompiledClip cc;
+        cc.startTick    = c.startTick;
+        cc.lengthTicks  = c.lengthTicks;
+        cc.patternIndex = c.patternIndex;
+        cc.offsetTicks  = c.offsetTicks;
+        cc.muted        = c.muted;
+        data->clips.push_back (cc);
+    }
 
     std::sort (data->clips.begin(), data->clips.end(),
                [] (const CompiledClip& a, const CompiledClip& b) { return a.startTick < b.startTick; });
@@ -80,6 +89,8 @@ std::shared_ptr<const PlaybackData> compilePlayback (const Project& p,
         clip.track      = c.track;
         clip.startTick  = c.startTick;
         clip.lengthTicks = c.lengthTicks;
+        clip.sourceOffsetTicks = c.sourceOffsetTicks;
+        clip.muted      = c.muted;
         clip.audio      = loadAudioClipFile (juce::File (c.filePath), formats, clip.sourceRate);
         if (clip.audio.getNumSamples() > 0)
             data->audioClips.push_back (std::move (clip));
@@ -211,22 +222,36 @@ void Sequencer::emitRange (const PlaybackData& data, const Transport& t,
 
     for (auto& clip : data.clips)
     {
+        if (clip.muted)
+            continue;
         if (clip.startTick >= toTick || clip.endTick() <= fromTick)
             continue;
         auto& pat = data.patterns[(size_t) clip.patternIndex];
+        const juce::int64 loopLen = (juce::int64) juce::jmax (1, pat.lengthTicks);
 
-        // pattern repeats if the clip is longer than the pattern
-        const int firstRepeat = juce::jmax (0, ((int) fromTick - clip.startTick) / juce::jmax (1, pat.lengthTicks));
-        for (int rep = firstRepeat; rep * pat.lengthTicks < clip.lengthTicks; ++rep)
+        // The clip's content begins offsetTicks into the pattern's own loop (set
+        // when a clip is created by slicing another one, so playback continues
+        // seamlessly rather than restarting the pattern from its own tick 0).
+        // patternOriginTick is where the pattern's tick-0 would fall on the
+        // timeline if the loop were extended backwards to align with that offset.
+        const juce::int64 patternOriginTick = (juce::int64) clip.startTick - clip.offsetTicks;
+
+        juce::int64 k = 0;
+        if ((juce::int64) fromTick > patternOriginTick)
+            k = ((juce::int64) fromTick - patternOriginTick) / loopLen;
+        k = juce::jmax ((juce::int64) 0, k - 1);   // safety margin for integer truncation
+
+        for (; patternOriginTick + k * loopLen < clip.endTick(); ++k)
         {
-            const int repStart = clip.startTick + rep * pat.lengthTicks;
-            if (repStart >= toTick)
-                break;
+            const juce::int64 repStart = patternOriginTick + k * loopLen;
             for (auto& e : pat.events)
             {
-                if (e.tick + repStart >= clip.endTick())
-                    break;   // events sorted: nothing later fits either
-                emit (e, (double) (repStart + e.tick));
+                const juce::int64 absTick = repStart + e.tick;
+                if (absTick < clip.startTick)
+                    continue;
+                if (absTick >= clip.endTick())
+                    break;   // events sorted: nothing later in this repeat fits either
+                emit (e, (double) absTick);
             }
         }
     }

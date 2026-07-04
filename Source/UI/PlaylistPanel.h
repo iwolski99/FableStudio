@@ -8,8 +8,11 @@ namespace fable
 {
 
 // Playlist: arrange pattern clips and audio clips on tracks along a bar timeline.
-// Left-click paints the selected pattern, drag moves, right edge resizes,
-// right-click deletes, and browser-dragged samples become audio clips.
+// A toolbar selects between Draw (paint/move/resize), Paint (drag to fill
+// consecutive cells), Slice (split a clip at the click point) and Mute
+// (toggle a clip on/off without removing it) - FL Studio's classic playlist
+// tool set. Right-click still deletes / opens the clip menu regardless of the
+// active tool. Browser-dragged samples become audio clips.
 // Playhead shown in song mode.
 
 class PlaylistPanel : public juce::Component,
@@ -29,6 +32,8 @@ public:
     void itemDragExit (const SourceDetails& dragSourceDetails) override;
     void itemDropped (const SourceDetails& dragSourceDetails) override;
 
+    enum class Tool { draw, paint, slice, mute };
+
 private:
     class ClipArea;
     class WaveformCache;
@@ -36,13 +41,18 @@ private:
     void changeListenerCallback (juce::ChangeBroadcaster*) override;
     void timerCallback() override;
     void refreshHeader();
+    void setTool (Tool t);
+    void refreshToolButtons();
 
     AppContext& context;
     juce::Label hintLabel;
     juce::ComboBox patternBox, snapBox;
+    juce::TextButton drawToolButton { "Draw" }, paintToolButton { "Paint" },
+                     sliceToolButton { "Slice" }, muteToolButton { "Mute" };
     juce::Viewport viewport;
     std::unique_ptr<ClipArea> clipArea;
     std::unique_ptr<WaveformCache> waveformCache;
+    Tool currentTool = Tool::draw;
     bool dragActive = false;
     juce::Point<int> dragPosition;
 

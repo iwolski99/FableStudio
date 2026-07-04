@@ -212,6 +212,105 @@ public:
             expectEquals (events[0].tick, 0);
             expectEquals (events[1].tick, kTicksPerStep + kTicksPerStep / 2);
         }
+
+        beginTest ("muted playlist clip is silent in song mode");
+        {
+            Project p;
+            const int cId = p.addChannel (GeneratorType::sampler, "D");
+            auto& pat = p.addPattern();
+            pat.dataFor (cId).steps[0].on = true;
+            PlaylistClip clip;
+            clip.patternIndex = 0;
+            clip.startTick = 0;
+            clip.lengthTicks = kTicksPerBar;
+            clip.muted = true;
+            p.clips.push_back (clip);
+
+            const double sr = 44100.0;
+            Sequencer::Transport t;
+            t.songMode = true;
+            t.bpm = 120.0;
+
+            auto events = run (*compilePlayback (p), t, sr, 512, (juce::int64) (4.0 * 60.0 / t.bpm * sr));
+            expect (events.empty());
+        }
+
+        beginTest ("sliced clip (offsetTicks) continues the pattern instead of restarting");
+        {
+            // A 2-note pattern: note A at step 0, note B at step 8 (half bar in).
+            // Slicing a full-bar clip at the halfway point should make the second
+            // clip play note B at its start (offsetTicks = half a bar), not note A.
+            Project p;
+            const int cId = p.addChannel (GeneratorType::synth, "S");
+            auto& pat = p.addPattern();
+            pat.dataFor (cId).notes.push_back ({ 0, kTicksPerStep, 60, 0.8f });                    // note A
+            pat.dataFor (cId).notes.push_back ({ kTicksPerBar / 2, kTicksPerStep, 67, 0.8f });      // note B
+
+            PlaylistClip second;
+            second.patternIndex = 0;
+            second.startTick    = kTicksPerBar / 2;         // second half of the bar
+            second.lengthTicks  = kTicksPerBar / 2;
+            second.offsetTicks  = kTicksPerBar / 2;         // content continues from the cut point
+            p.clips.push_back (second);
+
+            const double sr = 44100.0;
+            Sequencer::Transport t;
+            t.songMode = true;
+            t.bpm = 120.0;
+            const double samplesPerBar = 4.0 * 60.0 / t.bpm * sr;
+
+            auto events = run (*compilePlayback (p), t, sr, 512, (juce::int64) samplesPerBar);
+
+            std::vector<int> onPitches;
+            for (auto& e : events)
+                if (e.isOn)
+                    onPitches.push_back (e.pitch);
+
+            // Only note B (67) should sound, once, near the start of the clip -
+            // not note A (60), which would indicate the pattern restarted from tick 0.
+            expectEquals ((int) onPitches.size(), 1);
+            if (! onPitches.empty())
+                expectEquals (onPitches[0], 67);
+        }
+
+        beginTest ("sliced clip repeats correctly when longer than one pattern loop");
+        {
+            // Same 2-note pattern; a clip that starts at offset half-a-bar and
+            // spans 1.5 bars should see: B (at 0), A (at loop wrap), B (at loop wrap + half).
+            Project p;
+            const int cId = p.addChannel (GeneratorType::synth, "S");
+            auto& pat = p.addPattern();
+            pat.dataFor (cId).notes.push_back ({ 0, kTicksPerStep, 60, 0.8f });
+            pat.dataFor (cId).notes.push_back ({ kTicksPerBar / 2, kTicksPerStep, 67, 0.8f });
+
+            PlaylistClip clip;
+            clip.patternIndex = 0;
+            clip.startTick    = 0;
+            clip.lengthTicks  = kTicksPerBar + kTicksPerBar / 2;
+            clip.offsetTicks  = kTicksPerBar / 2;
+            p.clips.push_back (clip);
+
+            const double sr = 44100.0;
+            Sequencer::Transport t;
+            t.songMode = true;
+            t.bpm = 120.0;
+            const double samplesPerBar = 4.0 * 60.0 / t.bpm * sr;
+
+            auto events = run (*compilePlayback (p), t, sr, 512, (juce::int64) (samplesPerBar * 1.5));
+
+            std::vector<int> onPitches;
+            for (auto& e : events)
+                if (e.isOn)
+                    onPitches.push_back (e.pitch);
+
+            expectEquals ((int) onPitches.size(), 3);
+            if (onPitches.size() == 3)
+            {
+                expectEquals (onPitches[0], 67);
+                expectEquals (onPitches[1], 60);
+                expectEquals (onPitches[2], 67);
+            }
+        }
     }
 };
 

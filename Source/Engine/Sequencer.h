@@ -31,6 +31,8 @@ struct CompiledPattern
 struct CompiledClip
 {
     int startTick = 0, lengthTicks = 0, patternIndex = 0;
+    int offsetTicks = 0;   // position within the pattern's own loop where this clip's content begins
+    bool muted = false;
     int endTick() const { return startTick + lengthTicks; }
 };
 
@@ -38,6 +40,8 @@ struct CompiledAudioClip
 {
     juce::String name, filePath;
     int startTick = 0, lengthTicks = 0, track = 0, mixerTrack = 0;
+    int sourceOffsetTicks = 0;
+    bool muted = false;
     double sourceRate = 44100.0;
     juce::AudioBuffer<float> audio;
 

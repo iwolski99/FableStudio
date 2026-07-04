@@ -13,10 +13,12 @@ namespace
                             double sampleRate,
                             std::vector<std::shared_ptr<MixerBus>>& buses)
     {
-        const double samplesPerTick = 60.0 / (juce::jmax (1.0, bpm) * kPPQ);
+        const double secondsPerTick = 60.0 / (juce::jmax (1.0, bpm) * kPPQ);
 
         for (const auto& clip : data.audioClips)
         {
+            if (clip.muted)
+                continue;
             if (clip.startTick >= toTick || clip.endTick() <= fromTick)
                 continue;
 
@@ -34,7 +36,8 @@ namespace
             if (count <= 0)
                 continue;
 
-            const double clipStartSeconds   = (overlapStartTick - clip.startTick) * samplesPerTick;
+            const double clipStartSeconds   = (overlapStartTick - clip.startTick + clip.sourceOffsetTicks)
+                                              * secondsPerTick;
             double sourceSamplePosition = clipStartSeconds * clip.sourceRate;
             const double sourceAdvance  = clip.sourceRate / sampleRate;
 

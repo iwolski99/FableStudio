@@ -99,6 +99,8 @@ struct PlaylistClip
     int track        = 0;   // playlist lane
     int startTick    = 0;   // absolute song position
     int lengthTicks  = kTicksPerBar;
+    int offsetTicks  = 0;   // position within the pattern's own loop where this clip's content begins (slicing)
+    bool muted       = false;
 
     int endTick() const { return startTick + lengthTicks; }
 };
@@ -111,6 +113,8 @@ struct AudioClip
     int track       = 0;   // playlist lane
     int startTick   = 0;   // absolute song position
     int lengthTicks = kTicksPerBar;
+    int sourceOffsetTicks = 0;   // ticks into the source file where playback begins (slicing)
+    bool muted      = false;
 
     int endTick() const { return startTick + lengthTicks; }
 };

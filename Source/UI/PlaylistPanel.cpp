@@ -1,5 +1,7 @@
 #include "PlaylistPanel.h"
 #include <juce_audio_utils/juce_audio_utils.h>
+#include <set>
+#include <utility>
 
 namespace fable
 {
@@ -57,7 +59,10 @@ private:
 class PlaylistPanel::ClipArea : public juce::Component
 {
 public:
-    explicit ClipArea (PlaylistPanel& ownerToUse) : owner (ownerToUse) {}
+    explicit ClipArea (PlaylistPanel& ownerToUse) : owner (ownerToUse)
+    {
+        setWantsKeyboardFocus (true);
+    }
 
     enum class DragKind { none, pattern, audio };
 
@@ -160,19 +165,25 @@ public:
             auto r = clipRect (c);
 
             juce::Colour base = juce::Colour (0xff58a05e).withRotatedHue (0.13f * (float) c.patternIndex);
-            g.setColour (base.withAlpha (draggedKind == DragKind::pattern && (int) i == draggedIndex ? 1.0f : 0.85f));
+            if (c.muted)
+                base = base.withSaturation (base.getSaturation() * 0.35f).darker (0.25f);
+            const float alpha = c.muted ? 0.4f
+                                        : (draggedKind == DragKind::pattern && (int) i == draggedIndex ? 1.0f : 0.85f);
+            g.setColour (base.withAlpha (alpha));
             g.fillRoundedRectangle (r, 3.0f);
-            g.setColour (base.brighter (0.4f));
+            g.setColour (base.brighter (0.4f).withAlpha (c.muted ? 0.4f : 1.0f));
             g.fillRect (r.withHeight (4.0f));
             g.setColour (colours::outline);
             g.drawRoundedRectangle (r, 3.0f, 1.0f);
 
             if (c.patternIndex < (int) project.patterns.size())
             {
-                g.setColour (juce::Colours::black.withAlpha (0.75f));
+                g.setColour (juce::Colours::black.withAlpha (c.muted ? 0.5f : 0.75f));
                 g.setFont (juce::Font (juce::FontOptions (11.0f, juce::Font::bold)));
-                g.drawText (project.patterns[(size_t) c.patternIndex].name,
-                            r.reduced (5.0f, 0.0f), juce::Justification::centredLeft);
+                auto label = project.patterns[(size_t) c.patternIndex].name;
+                if (c.muted)
+                    label += "  (muted)";
+                g.drawText (label, r.reduced (5.0f, 0.0f), juce::Justification::centredLeft);
             }
         }
 
@@ -185,19 +196,26 @@ public:
             auto r = audioRect (c);
 
             auto base = juce::Colour (0xffc9803c);
-            g.setColour (base.withAlpha (draggedKind == DragKind::audio && (int) i == draggedIndex ? 1.0f : 0.88f));
+            if (c.muted)
+                base = base.withSaturation (base.getSaturation() * 0.35f).darker (0.25f);
+            const float alpha = c.muted ? 0.45f
+                                        : (draggedKind == DragKind::audio && (int) i == draggedIndex ? 1.0f : 0.88f);
+            g.setColour (base.withAlpha (alpha));
             g.fillRoundedRectangle (r, 3.0f);
-            g.setColour (base.brighter (0.35f));
+            g.setColour (base.brighter (0.35f).withAlpha (c.muted ? 0.45f : 1.0f));
             g.fillRect (r.withHeight (4.0f));
-            drawAudioWaveform (g, c, r, juce::Colours::white);
+            if (! c.muted)
+                drawAudioWaveform (g, c, r, juce::Colours::white);
             g.setColour (colours::outline);
             g.drawRoundedRectangle (r, 3.0f, 1.0f);
 
-            g.setColour (juce::Colours::black.withAlpha (0.75f));
+            g.setColour (juce::Colours::black.withAlpha (c.muted ? 0.5f : 0.75f));
             g.setFont (juce::Font (juce::FontOptions (11.0f, juce::Font::bold)));
-            const auto label = (c.name.isNotEmpty() ? c.name : juce::File (c.filePath).getFileNameWithoutExtension())
-                             + "  >  " + (c.mixerTrack == 0 ? juce::String ("Master")
-                                                            : "Insert " + juce::String (c.mixerTrack));
+            auto label = (c.name.isNotEmpty() ? c.name : juce::File (c.filePath).getFileNameWithoutExtension())
+                       + "  >  " + (c.mixerTrack == 0 ? juce::String ("Master")
+                                                      : "Insert " + juce::String (c.mixerTrack));
+            if (c.muted)
+                label += "  (muted)";
             g.drawText (label, r.reduced (5.0f, 0.0f), juce::Justification::centredLeft);
         }
 
@@ -260,11 +278,27 @@ public:
         return -1;
     }
 
+    void mouseMove (const juce::MouseEvent& e) override
+    {
+        lastMousePos = e.getPosition();
+    }
+
+    void mouseEnter (const juce::MouseEvent& e) override
+    {
+        // Grab focus on hover (not just click) so keyboard shortcuts (Delete,
+        // tool-switch numbers, Home/End) work without needing a click first -
+        // a click would otherwise paint/slice/mute depending on the active tool.
+        lastMousePos = e.getPosition();
+        grabKeyboardFocus();
+    }
+
     void mouseDown (const juce::MouseEvent& e) override
     {
+        grabKeyboardFocus();
+        lastMousePos = e.getPosition();
         auto& project = owner.context.project;
 
-        // click in ruler: seek (song mode)
+        // click in ruler: seek (song mode) - tool independent
         if (e.getPosition().y < kRulerHeight)
         {
             owner.context.engine.setPositionTicks (
@@ -282,63 +316,48 @@ public:
             draggedKind = draggedIndex >= 0 ? DragKind::pattern : DragKind::none;
         }
 
+        // right-click context menu (delete / route / open editor) - tool independent
         if (e.mods.isPopupMenu())
         {
             if (draggedIndex >= 0)
             {
                 if (draggedKind == DragKind::pattern)
-                    project.clips.erase (project.clips.begin() + draggedIndex);
-                else if (draggedKind == DragKind::audio)
+                {
+                    showPatternClipMenu (draggedIndex);
+                    return;
+                }
+                if (draggedKind == DragKind::audio)
                 {
                     showAudioClipMenu (draggedIndex);
                     return;
                 }
-                draggedIndex = -1;
-                draggedKind = DragKind::none;
-                owner.context.contentChanged();
-                updateSize();
-                repaint();
             }
             return;
         }
 
-        if (draggedIndex < 0)
+        switch (owner.currentTool)
         {
-            // paint the currently selected pattern here
-            auto* pattern = owner.context.selectedPattern();
-            if (pattern == nullptr || e.getPosition().x < kLabelWidth)
-                return;
-
-            PlaylistClip c;
-            c.patternIndex = owner.context.selectedPatternIndex;
-            c.track        = juce::jlimit (0, kNumPlaylistTracks - 1,
-                                           (e.getPosition().y - kRulerHeight) / kTrackHeight);
-            c.startTick    = ((int) plXToTick (e.getPosition().x) / snapTicks()) * snapTicks();
-            c.lengthTicks  = pattern->lengthTicks();
-            project.clips.push_back (c);
-            draggedIndex = (int) project.clips.size() - 1;
-            draggedKind = DragKind::pattern;
-            resizing = false;
-            dragOffsetTicks = 0;
-            owner.context.contentChanged();
-            repaint();
-        }
-        else
-        {
-            resizing = onEdge;
-            if (draggedKind == DragKind::pattern)
-                dragOffsetTicks = (int) plXToTick (e.getPosition().x)
-                                  - project.clips[(size_t) draggedIndex].startTick;
-            else if (draggedKind == DragKind::audio)
-                dragOffsetTicks = (int) plXToTick (e.getPosition().x)
-                                  - project.audioClips[(size_t) draggedIndex].startTick;
+            case PlaylistPanel::Tool::draw:  drawMouseDown (e, onEdge); break;
+            case PlaylistPanel::Tool::paint: paintMouseDown (e); break;
+            case PlaylistPanel::Tool::slice: sliceAt (e.getPosition()); break;
+            case PlaylistPanel::Tool::mute:  muteAt (e.getPosition()); break;
         }
     }
 
     void mouseDrag (const juce::MouseEvent& e) override
     {
-        if (draggedIndex < 0)
+        lastMousePos = e.getPosition();
+
+        if (owner.currentTool == PlaylistPanel::Tool::paint)
+        {
+            paintMouseDrag (e);
             return;
+        }
+
+        // draw tool: move/resize the clip grabbed on mouseDown; other tools don't drag
+        if (owner.currentTool != PlaylistPanel::Tool::draw || draggedIndex < 0)
+            return;
+
         const int snap = snapTicks();
 
         auto applyDrag = [&] (auto& c)
@@ -384,6 +403,7 @@ public:
     {
         draggedIndex = -1;
         draggedKind = DragKind::none;
+        paintedCells.clear();
         if (changed)
         {
             changed = false;
@@ -392,14 +412,265 @@ public:
         }
     }
 
+    bool keyPressed (const juce::KeyPress& key) override
+    {
+        if (key == juce::KeyPress::deleteKey || key == juce::KeyPress::backspaceKey)
+        {
+            bool onEdge = false;
+            if (const int i = audioClipIndexAt (lastMousePos, onEdge); i >= 0)
+            {
+                owner.context.project.audioClips.erase (owner.context.project.audioClips.begin() + i);
+                owner.context.contentChanged();
+                updateSize();
+                repaint();
+                return true;
+            }
+            if (const int i = clipIndexAt (lastMousePos, onEdge); i >= 0)
+            {
+                owner.context.project.clips.erase (owner.context.project.clips.begin() + i);
+                owner.context.contentChanged();
+                updateSize();
+                repaint();
+                return true;
+            }
+            return false;
+        }
+
+        if (key == juce::KeyPress ('1', juce::ModifierKeys(), 0)) { owner.setTool (PlaylistPanel::Tool::draw);  return true; }
+        if (key == juce::KeyPress ('2', juce::ModifierKeys(), 0)) { owner.setTool (PlaylistPanel::Tool::paint); return true; }
+        if (key == juce::KeyPress ('3', juce::ModifierKeys(), 0)) { owner.setTool (PlaylistPanel::Tool::slice); return true; }
+        if (key == juce::KeyPress ('4', juce::ModifierKeys(), 0)) { owner.setTool (PlaylistPanel::Tool::mute);  return true; }
+
+        if (key == juce::KeyPress::homeKey)
+        {
+            owner.context.engine.setPositionTicks (0.0);
+            return true;
+        }
+        if (key == juce::KeyPress::endKey)
+        {
+            const int songEnd = owner.context.project.songLengthTicks();
+            owner.context.engine.setPositionTicks ((double) juce::jmax (0, songEnd - kTicksPerBar));
+            return true;
+        }
+
+        return false;
+    }
+
     PlaylistPanel& owner;
     int draggedIndex = -1;
     DragKind draggedKind = DragKind::none;
     int dragOffsetTicks = 0;
     bool resizing = false;
     bool changed = false;
+    juce::Point<int> lastMousePos;
+    std::set<std::pair<int, int>> paintedCells;   // (track, cellStartTick) touched this drag gesture
 
 private:
+    void drawMouseDown (const juce::MouseEvent& e, bool onEdge)
+    {
+        auto& project = owner.context.project;
+
+        if (draggedIndex < 0)
+        {
+            // paint the currently selected pattern here
+            auto* pattern = owner.context.selectedPattern();
+            if (pattern == nullptr || e.getPosition().x < kLabelWidth)
+                return;
+
+            PlaylistClip c;
+            c.patternIndex = owner.context.selectedPatternIndex;
+            c.track        = juce::jlimit (0, kNumPlaylistTracks - 1,
+                                           (e.getPosition().y - kRulerHeight) / kTrackHeight);
+            c.startTick    = ((int) plXToTick (e.getPosition().x) / snapTicks()) * snapTicks();
+            c.lengthTicks  = pattern->lengthTicks();
+            project.clips.push_back (c);
+            draggedIndex = (int) project.clips.size() - 1;
+            draggedKind = DragKind::pattern;
+            resizing = false;
+            dragOffsetTicks = 0;
+            owner.context.contentChanged();
+            repaint();
+        }
+        else
+        {
+            resizing = onEdge;
+            if (draggedKind == DragKind::pattern)
+                dragOffsetTicks = (int) plXToTick (e.getPosition().x)
+                                  - project.clips[(size_t) draggedIndex].startTick;
+            else if (draggedKind == DragKind::audio)
+                dragOffsetTicks = (int) plXToTick (e.getPosition().x)
+                                  - project.audioClips[(size_t) draggedIndex].startTick;
+        }
+    }
+
+    // Paint tool: drag across a track to fill consecutive pattern-length cells
+    // with the currently selected pattern (skips cells that already hold a clip).
+    void paintCellAt (juce::Point<int> pos)
+    {
+        auto* pattern = owner.context.selectedPattern();
+        if (pattern == nullptr || pos.x < kLabelWidth || pos.y < kRulerHeight)
+            return;
+
+        const int track = juce::jlimit (0, kNumPlaylistTracks - 1, (pos.y - kRulerHeight) / kTrackHeight);
+        const int cellLen = juce::jmax (1, pattern->lengthTicks());
+        const int cellStart = ((int) plXToTick (pos.x) / cellLen) * cellLen;
+
+        const auto key = std::make_pair (track, cellStart);
+        if (paintedCells.count (key) > 0)
+            return;
+        paintedCells.insert (key);
+
+        auto& clips = owner.context.project.clips;
+        for (auto& c : clips)
+            if (c.track == track && c.startTick == cellStart)
+                return;   // already occupied
+
+        PlaylistClip c;
+        c.patternIndex = owner.context.selectedPatternIndex;
+        c.track        = track;
+        c.startTick    = cellStart;
+        c.lengthTicks  = cellLen;
+        clips.push_back (c);
+        owner.context.contentChanged();
+        updateSize();
+        repaint();
+    }
+
+    void paintMouseDown (const juce::MouseEvent& e)
+    {
+        paintedCells.clear();
+        paintCellAt (e.getPosition());
+    }
+
+    void paintMouseDrag (const juce::MouseEvent& e)
+    {
+        paintCellAt (e.getPosition());
+    }
+
+    // Slice tool: split whichever clip is under the click into two, preserving
+    // continuity (the second half continues the pattern/audio rather than
+    // restarting) via offsetTicks / sourceOffsetTicks.
+    void sliceAt (juce::Point<int> pos)
+    {
+        bool onEdge = false;
+        if (const int i = audioClipIndexAt (pos, onEdge); i >= 0)
+        {
+            sliceAudioClip (i, pos.x);
+            return;
+        }
+        if (const int i = clipIndexAt (pos, onEdge); i >= 0)
+        {
+            slicePatternClip (i, pos.x);
+            return;
+        }
+    }
+
+    void slicePatternClip (int index, int mouseX)
+    {
+        auto& clips = owner.context.project.clips;
+        if (index < 0 || index >= (int) clips.size())
+            return;
+
+        auto original = clips[(size_t) index];
+        const int snap = snapTicks();
+        const int cutTick = ((int) plXToTick (mouseX) / snap) * snap;
+
+        // require at least one snap unit on each side, else there's nothing to cut
+        if (cutTick <= original.startTick + snap - 1 || cutTick >= original.endTick() - snap + 1)
+            return;
+
+        PlaylistClip second = original;
+        second.startTick   = cutTick;
+        second.lengthTicks = original.endTick() - cutTick;
+        second.offsetTicks = original.offsetTicks + (cutTick - original.startTick);
+
+        clips[(size_t) index].lengthTicks = cutTick - original.startTick;
+        clips.push_back (second);
+
+        owner.context.contentChanged();
+        updateSize();
+        repaint();
+    }
+
+    void sliceAudioClip (int index, int mouseX)
+    {
+        auto& clips = owner.context.project.audioClips;
+        if (index < 0 || index >= (int) clips.size())
+            return;
+
+        auto original = clips[(size_t) index];
+        const int snap = snapTicks();
+        const int cutTick = ((int) plXToTick (mouseX) / snap) * snap;
+
+        if (cutTick <= original.startTick + snap - 1 || cutTick >= original.endTick() - snap + 1)
+            return;
+
+        AudioClip second = original;
+        second.startTick         = cutTick;
+        second.lengthTicks       = original.endTick() - cutTick;
+        second.sourceOffsetTicks = original.sourceOffsetTicks + (cutTick - original.startTick);
+
+        clips[(size_t) index].lengthTicks = cutTick - original.startTick;
+        clips.push_back (second);
+
+        owner.context.contentChanged();
+        updateSize();
+        repaint();
+    }
+
+    // Mute tool: toggle a clip's muted flag without moving or deleting it.
+    void muteAt (juce::Point<int> pos)
+    {
+        bool onEdge = false;
+        if (const int i = audioClipIndexAt (pos, onEdge); i >= 0)
+        {
+            owner.context.project.audioClips[(size_t) i].muted =
+                ! owner.context.project.audioClips[(size_t) i].muted;
+            owner.context.contentChanged();
+            repaint();
+            return;
+        }
+        if (const int i = clipIndexAt (pos, onEdge); i >= 0)
+        {
+            owner.context.project.clips[(size_t) i].muted = ! owner.context.project.clips[(size_t) i].muted;
+            owner.context.contentChanged();
+            repaint();
+        }
+    }
+
+    void showPatternClipMenu (int clipIndex)
+    {
+        auto& clips = owner.context.project.clips;
+        if (clipIndex < 0 || clipIndex >= (int) clips.size())
+            return;
+
+        juce::PopupMenu m;
+        m.addItem (clips[(size_t) clipIndex].muted ? "Unmute" : "Mute", [this, clipIndex]
+        {
+            if (clipIndex >= 0 && clipIndex < (int) owner.context.project.clips.size())
+            {
+                owner.context.project.clips[(size_t) clipIndex].muted =
+                    ! owner.context.project.clips[(size_t) clipIndex].muted;
+                owner.context.contentChanged();
+                repaint();
+            }
+        });
+        m.addItem ("Delete pattern clip", [this, clipIndex]
+        {
+            if (clipIndex >= 0 && clipIndex < (int) owner.context.project.clips.size())
+            {
+                owner.context.project.clips.erase (owner.context.project.clips.begin() + clipIndex);
+                owner.context.contentChanged();
+                updateSize();
+                repaint();
+            }
+        });
+
+        m.showMenuAsync (juce::PopupMenu::Options().withTargetComponent (this));
+        draggedIndex = -1;
+        draggedKind = DragKind::none;
+    }
+
     void showAudioClipMenu (int clipIndex)
     {
         if (clipIndex < 0 || clipIndex >= (int) owner.context.project.audioClips.size())
@@ -423,6 +694,17 @@ private:
         }
         m.addSubMenu ("Route to mixer track", route);
         m.addSeparator();
+        m.addItem (owner.context.project.audioClips[(size_t) clipIndex].muted ? "Unmute" : "Mute",
+                  [this, clipIndex]
+        {
+            if (clipIndex >= 0 && clipIndex < (int) owner.context.project.audioClips.size())
+            {
+                owner.context.project.audioClips[(size_t) clipIndex].muted =
+                    ! owner.context.project.audioClips[(size_t) clipIndex].muted;
+                owner.context.contentChanged();
+                repaint();
+            }
+        });
         m.addItem ("Delete audio clip", [this, clipIndex]
         {
             if (clipIndex >= 0 && clipIndex < (int) owner.context.project.audioClips.size())
@@ -460,7 +742,18 @@ PlaylistPanel::PlaylistPanel (AppContext& ctx) : context (ctx)
     snapBox.setSelectedId (kTicksPerBar, juce::dontSendNotification);
     addAndMakeVisible (snapBox);
 
-    hintLabel.setText ("paint: left-click (uses playlist pattern picker)   delete: right-click   seek: click ruler",
+    drawToolButton.setTooltip ("Draw (1): paint/move/resize clips");
+    paintToolButton.setTooltip ("Paint (2): drag to fill consecutive cells with the picked pattern");
+    sliceToolButton.setTooltip ("Slice (3): click a clip to split it in two");
+    muteToolButton.setTooltip ("Mute (4): click a clip to toggle it on/off");
+    drawToolButton.onClick  = [this] { setTool (Tool::draw); };
+    paintToolButton.onClick = [this] { setTool (Tool::paint); };
+    sliceToolButton.onClick = [this] { setTool (Tool::slice); };
+    muteToolButton.onClick  = [this] { setTool (Tool::mute); };
+    for (auto* b : { &drawToolButton, &paintToolButton, &sliceToolButton, &muteToolButton })
+        addAndMakeVisible (*b);
+
+    hintLabel.setText ("right-click: delete/route   seek: click ruler   1-4: switch tool",
                        juce::dontSendNotification);
     hintLabel.setColour (juce::Label::textColourId, colours::textDim);
     hintLabel.setFont (juce::Font (juce::FontOptions (11.0f)));
@@ -473,6 +766,7 @@ PlaylistPanel::PlaylistPanel (AppContext& ctx) : context (ctx)
     context.structureBroadcaster.addChangeListener (this);
     context.contentBroadcaster.addChangeListener (this);
     refreshHeader();
+    refreshToolButtons();
     clipArea->updateSize();
 
     startTimerHz (30);
@@ -504,6 +798,27 @@ void PlaylistPanel::refreshHeader()
     patternBox.setSelectedItemIndex (context.selectedPatternIndex, juce::dontSendNotification);
 }
 
+void PlaylistPanel::setTool (Tool t)
+{
+    currentTool = t;
+    refreshToolButtons();
+}
+
+void PlaylistPanel::refreshToolButtons()
+{
+    auto style = [this] (juce::TextButton& b, Tool t)
+    {
+        b.setColour (juce::TextButton::buttonColourId,
+                    currentTool == t ? colours::accent.darker (0.2f) : colours::panelLight);
+        b.setColour (juce::TextButton::textColourOffId,
+                    currentTool == t ? juce::Colours::black : colours::text);
+    };
+    style (drawToolButton,  Tool::draw);
+    style (paintToolButton, Tool::paint);
+    style (sliceToolButton, Tool::slice);
+    style (muteToolButton,  Tool::mute);
+}
+
 void PlaylistPanel::timerCallback()
 {
     if (context.engine.isPlaying() && context.engine.isSongMode())
@@ -532,12 +847,21 @@ void PlaylistPanel::paint (juce::Graphics& g)
 void PlaylistPanel::resized()
 {
     auto area = getLocalBounds();
+
+    auto toolRow = area.removeFromTop (26).reduced (4, 2);
+    for (auto* b : { &drawToolButton, &paintToolButton, &sliceToolButton, &muteToolButton })
+    {
+        b->setBounds (toolRow.removeFromLeft (56));
+        toolRow.removeFromLeft (3);
+    }
+
     auto headerArea = area.removeFromTop (30).reduced (4, 3);
     patternBox.setBounds (headerArea.removeFromLeft (170));
     headerArea.removeFromLeft (8);
     snapBox.setBounds (headerArea.removeFromLeft (130));
     headerArea.removeFromLeft (10);
     hintLabel.setBounds (headerArea);
+
     viewport.setBounds (area);
     clipArea->updateSize();
 }
