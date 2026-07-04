@@ -38,7 +38,27 @@ BrowserPanel::BrowserPanel (AppContext& ctx) : context (ctx)
         context.engine.getFormatManager().getWildcardForAllFormats() + ";*.fable",
         "*", "audio files");
     dirContents = std::make_unique<juce::DirectoryContentsList> (fileFilter.get(), scanThread);
-    dirContents->setDirectory (juce::File::getSpecialLocation (juce::File::userHomeDirectory), true, true);
+
+    loadSampleRoots();
+
+    rootBox.onChange = [this]
+    {
+        const int index = rootBox.getSelectedItemIndex();
+        if (index >= 0)
+            setRoot (index);
+    };
+    addAndMakeVisible (rootBox);
+
+    addFolderButton.setTooltip ("Add a sample folder (scans that folder + subfolders)");
+    addFolderButton.onClick = [this] { addFolderClicked(); };
+    addAndMakeVisible (addFolderButton);
+
+    removeFolderButton.setTooltip ("Remove the selected folder from the list");
+    removeFolderButton.onClick = [this] { removeCurrentFolderClicked(); };
+    addAndMakeVisible (removeFolderButton);
+
+    refreshRootBox();
+    setRoot (0);
 
     fileTree = std::make_unique<SampleFileTree> (*dirContents, *this);
     fileTree->addListener (this);
@@ -54,6 +74,81 @@ BrowserPanel::~BrowserPanel()
 {
     context.structureBroadcaster.removeChangeListener (this);
     fileTree->removeListener (this);
+}
+
+void BrowserPanel::loadSampleRoots()
+{
+    sampleRoots.clear();
+    sampleRoots.add (juce::File::getSpecialLocation (juce::File::userHomeDirectory));
+
+    auto file = getAppDataDir().getChildFile ("sample-folders.txt");
+    if (file.existsAsFile())
+        for (auto& line : juce::StringArray::fromLines (file.loadFileAsString()))
+            if (line.isNotEmpty() && juce::File (line).isDirectory())
+                sampleRoots.add (juce::File (line));
+}
+
+void BrowserPanel::saveSampleRoots()
+{
+    juce::StringArray lines;
+    for (int i = 1; i < sampleRoots.size(); ++i)   // skip Home at index 0, it's implicit
+        lines.add (sampleRoots.getReference (i).getFullPathName());
+    getAppDataDir().getChildFile ("sample-folders.txt").replaceWithText (lines.joinIntoString ("\n"));
+}
+
+void BrowserPanel::refreshRootBox()
+{
+    rootBox.clear (juce::dontSendNotification);
+    rootBox.addItem ("Home", 1);
+    for (int i = 1; i < sampleRoots.size(); ++i)
+        rootBox.addItem (sampleRoots.getReference (i).getFileName(), i + 1);
+    rootBox.setSelectedItemIndex (juce::jlimit (0, sampleRoots.size() - 1, rootBox.getSelectedItemIndex()),
+                                  juce::dontSendNotification);
+}
+
+void BrowserPanel::setRoot (int rootIndex)
+{
+    if (rootIndex < 0 || rootIndex >= sampleRoots.size())
+        return;
+    rootBox.setSelectedItemIndex (rootIndex, juce::dontSendNotification);
+    removeFolderButton.setEnabled (rootIndex != 0);
+    dirContents->setDirectory (sampleRoots.getReference (rootIndex), true, true);
+}
+
+void BrowserPanel::addFolderClicked()
+{
+    folderChooser = std::make_unique<juce::FileChooser> ("Add sample folder",
+                        juce::File::getSpecialLocation (juce::File::userHomeDirectory));
+    folderChooser->launchAsync (juce::FileBrowserComponent::openMode
+                                | juce::FileBrowserComponent::canSelectDirectories,
+        [this] (const juce::FileChooser& fc)
+        {
+            const auto folder = fc.getResult();
+            if (folder == juce::File() || ! folder.isDirectory())
+                return;
+            if (sampleRoots.contains (folder))
+            {
+                setRoot (sampleRoots.indexOf (folder));
+                return;
+            }
+            sampleRoots.add (folder);
+            saveSampleRoots();
+            refreshRootBox();
+            setRoot (sampleRoots.size() - 1);
+            if (context.showStatusMessage)
+                context.showStatusMessage ("Added sample folder: " + folder.getFullPathName());
+        });
+}
+
+void BrowserPanel::removeCurrentFolderClicked()
+{
+    const int index = rootBox.getSelectedItemIndex();
+    if (index <= 0 || index >= sampleRoots.size())   // Home (0) can't be removed
+        return;
+    sampleRoots.remove (index);
+    saveSampleRoots();
+    refreshRootBox();
+    setRoot (0);
 }
 
 void BrowserPanel::refreshPlugins()
@@ -182,6 +277,15 @@ void BrowserPanel::resized()
     pluginList.setBounds (area.removeFromTop (juce::jmax (80, area.getHeight() / 3)));
     area.removeFromTop (6);
     samplesHeader.setBounds (area.removeFromTop (18));
+
+    auto rootRow = area.removeFromTop (24);
+    removeFolderButton.setBounds (rootRow.removeFromRight (22));
+    rootRow.removeFromRight (3);
+    addFolderButton.setBounds (rootRow.removeFromRight (22));
+    rootRow.removeFromRight (3);
+    rootBox.setBounds (rootRow);
+    area.removeFromTop (4);
+
     fileTree->setBounds (area);
 }
 

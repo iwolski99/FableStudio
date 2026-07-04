@@ -1,4 +1,6 @@
 #include "PianoRollPanel.h"
+#include <limits>
+#include <set>
 
 namespace fable
 {
@@ -96,7 +98,21 @@ public:
                 g.fillRoundedRectangle (r, 2.0f);
                 g.setColour (colours::outline);
                 g.drawRoundedRectangle (r, 2.0f, 1.0f);
+
+                if (selectedNotes.count ((int) i) > 0)
+                {
+                    g.setColour (juce::Colours::white);
+                    g.drawRoundedRectangle (r.reduced (0.5f), 2.0f, 2.0f);
+                }
             }
+        }
+
+        if (selecting)
+        {
+            g.setColour (colours::accent.withAlpha (0.2f));
+            g.fillRect (selectionRect);
+            g.setColour (colours::accent);
+            g.drawRect (selectionRect, 1);
         }
 
         // playhead
@@ -203,9 +219,29 @@ public:
             {
                 notes->erase (notes->begin() + draggedIndex);
                 draggedIndex = -1;
+                selectedNotes.clear();   // indices after it just shifted
                 owner.context.contentChanged();
                 repaint();
             }
+            return;
+        }
+
+        // Ctrl+click/drag: multi-select, independent of drawing/erasing.
+        if (e.mods.isCtrlDown())
+        {
+            if (draggedIndex >= 0)
+            {
+                if (selectedNotes.count (draggedIndex) > 0) selectedNotes.erase (draggedIndex);
+                else selectedNotes.insert (draggedIndex);
+            }
+            else
+            {
+                selecting = true;
+                selectionStart = e.getPosition();
+                updateSelectionRect (e.getPosition());
+            }
+            draggedIndex = -1;
+            repaint();
             return;
         }
 
@@ -236,6 +272,13 @@ public:
     void mouseDrag (const juce::MouseEvent& e) override
     {
         lastMousePos = e.getPosition();
+
+        if (selecting)
+        {
+            updateSelectionRect (e.getPosition());
+            repaint();
+            return;
+        }
 
         auto* notes = owner.currentNotes();
         if (notes == nullptr || draggedIndex < 0 || draggedIndex >= (int) notes->size())
@@ -274,6 +317,12 @@ public:
 
     void mouseUp (const juce::MouseEvent&) override
     {
+        if (selecting)
+        {
+            selecting = false;
+            repaint();
+            return;
+        }
         if (previewPitch >= 0)
         {
             owner.context.engine.auditionNoteOff (owner.context.selectedChannelId, previewPitch);
@@ -296,14 +345,15 @@ public:
         if (auto* notes = owner.currentNotes(); notes != nullptr && index >= 0)
         {
             notes->erase (notes->begin() + index);
+            selectedNotes.clear();
             owner.context.contentChanged();
             repaint();
         }
     }
 
-    // Keyboard shortcuts act on the note currently under the mouse cursor
-    // (there is no multi-select model in the piano roll, so these are
-    // single-note operations rather than FL's full selection-based editing).
+    // Keyboard shortcuts act on the current multi-selection (Ctrl+drag /
+    // Ctrl+click) when one exists, otherwise fall back to the single note
+    // under the mouse cursor.
     bool keyPressed (const juce::KeyPress& key) override
     {
         auto* notes = owner.currentNotes();
@@ -311,6 +361,12 @@ public:
 
         if (code == juce::KeyPress::deleteKey || code == juce::KeyPress::backspaceKey)
         {
+            if (notes != nullptr && ! selectedNotes.empty())
+            {
+                deleteSelectedNotes();
+                return true;
+            }
+
             bool onEdge = false;
             const int index = notes != nullptr ? noteIndexAt (lastMousePos, onEdge) : -1;
             if (index < 0)
@@ -323,17 +379,34 @@ public:
 
         if (code == juce::KeyPress::upKey || code == juce::KeyPress::downKey)
         {
+            const int semitones = key.getModifiers().isShiftDown() ? 12 : 1;
+            const int delta = (code == juce::KeyPress::upKey ? 1 : -1) * semitones;
+
+            if (notes != nullptr && ! selectedNotes.empty())
+            {
+                for (int i : selectedNotes)
+                    if (i >= 0 && i < (int) notes->size())
+                        (*notes)[(size_t) i].pitch = juce::jlimit (0, 127, (*notes)[(size_t) i].pitch + delta);
+                owner.context.contentChanged();
+                repaint();
+                return true;
+            }
+
             bool onEdge = false;
             const int index = notes != nullptr ? noteIndexAt (lastMousePos, onEdge) : -1;
             if (index < 0)
                 return false;
 
-            const int semitones = key.getModifiers().isShiftDown() ? 12 : 1;
-            const int delta = (code == juce::KeyPress::upKey ? 1 : -1) * semitones;
             auto& n = (*notes)[(size_t) index];
             n.pitch = juce::jlimit (0, 127, n.pitch + delta);
             owner.context.contentChanged();
             repaint();
+            return true;
+        }
+
+        if (key == juce::KeyPress ('d', juce::ModifierKeys::ctrlModifier, 0))
+        {
+            cloneSelectedOrHovered();
             return true;
         }
 
@@ -353,6 +426,71 @@ public:
         return false;
     }
 
+    void updateSelectionRect (juce::Point<int> current)
+    {
+        selectionRect = juce::Rectangle<int> (selectionStart, current);
+        selectedNotes.clear();
+
+        if (auto* notes = owner.currentNotes())
+            for (size_t i = 0; i < notes->size(); ++i)
+                if (noteRect ((*notes)[i]).getSmallestIntegerContainer().intersects (selectionRect))
+                    selectedNotes.insert ((int) i);
+    }
+
+    void deleteSelectedNotes()
+    {
+        auto* notes = owner.currentNotes();
+        if (notes == nullptr)
+            return;
+        for (auto it = selectedNotes.rbegin(); it != selectedNotes.rend(); ++it)
+            if (*it >= 0 && *it < (int) notes->size())
+                notes->erase (notes->begin() + *it);
+        selectedNotes.clear();
+        owner.context.contentChanged();
+        repaint();
+    }
+
+    // Clones the selection (or, if nothing is selected, the note under the
+    // cursor) shifted to start right after the group's current end.
+    void cloneSelectedOrHovered()
+    {
+        auto* notes = owner.currentNotes();
+        if (notes == nullptr)
+            return;
+
+        if (selectedNotes.empty())
+        {
+            bool onEdge = false;
+            const int index = noteIndexAt (lastMousePos, onEdge);
+            if (index < 0)
+                return;
+            selectedNotes.insert (index);
+        }
+
+        int minStart = std::numeric_limits<int>::max();
+        int maxEnd = 0;
+        for (int i : selectedNotes)
+        {
+            minStart = juce::jmin (minStart, (*notes)[(size_t) i].startTick);
+            maxEnd   = juce::jmax (maxEnd, (*notes)[(size_t) i].startTick + (*notes)[(size_t) i].lengthTicks);
+        }
+        const int shift = maxEnd - minStart;
+
+        std::set<int> newSelection;
+        for (int i : selectedNotes)
+        {
+            auto clone = (*notes)[(size_t) i];
+            clone.startTick += shift;
+            notes->push_back (clone);
+            newSelection.insert ((int) notes->size() - 1);
+        }
+
+        selectedNotes = std::move (newSelection);
+        owner.context.contentChanged();
+        updateSize();
+        repaint();
+    }
+
     PianoRollPanel& owner;
     int draggedIndex = -1;
     int dragOffsetTicks = 0;
@@ -361,6 +499,12 @@ public:
     bool resizing = false;
     bool changedWhileDragging = false;
     juce::Point<int> lastMousePos;
+
+    // Ctrl+drag rubber-band multi-select; Ctrl+click toggles a single note.
+    bool selecting = false;
+    juce::Point<int> selectionStart;
+    juce::Rectangle<int> selectionRect;
+    std::set<int> selectedNotes;
 };
 
 // ------------------------------------------------------------- velocity lane
@@ -462,7 +606,7 @@ PianoRollPanel::PianoRollPanel (AppContext& ctx) : context (ctx)
     addAndMakeVisible (snapBox);
 
     hintLabel.setText ("draw: left-click   delete: right-click/Del   resize: drag right edge   "
-                       "Up/Down: transpose (Shift=octave)   Home/End: seek",
+                       "Up/Down: transpose (Shift=octave)   Ctrl+drag: select   Ctrl+D: clone",
                        juce::dontSendNotification);
     hintLabel.setColour (juce::Label::textColourId, colours::textDim);
     hintLabel.setFont (juce::Font (juce::FontOptions (11.0f)));

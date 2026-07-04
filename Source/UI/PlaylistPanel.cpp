@@ -1,5 +1,6 @@
 #include "PlaylistPanel.h"
 #include <juce_audio_utils/juce_audio_utils.h>
+#include <limits>
 #include <set>
 #include <utility>
 
@@ -185,6 +186,12 @@ public:
                     label += "  (muted)";
                 g.drawText (label, r.reduced (5.0f, 0.0f), juce::Justification::centredLeft);
             }
+
+            if (selectedClips.count ((int) i) > 0)
+            {
+                g.setColour (juce::Colours::white);
+                g.drawRoundedRectangle (r.reduced (0.5f), 3.0f, 2.0f);
+            }
         }
 
         // audio clips
@@ -217,6 +224,12 @@ public:
             if (c.muted)
                 label += "  (muted)";
             g.drawText (label, r.reduced (5.0f, 0.0f), juce::Justification::centredLeft);
+
+            if (selectedAudioClips.count ((int) i) > 0)
+            {
+                g.setColour (juce::Colours::white);
+                g.drawRoundedRectangle (r.reduced (0.5f), 3.0f, 2.0f);
+            }
         }
 
         // song end marker
@@ -230,6 +243,14 @@ public:
             const int x = plTickToX (owner.context.engine.getPlayheadTicks());
             g.drawVerticalLine (x, 0.0f, (float) getHeight());
             g.drawVerticalLine (x + 1, 0.0f, (float) kRulerHeight);
+        }
+
+        if (selecting)
+        {
+            g.setColour (colours::accent.withAlpha (0.2f));
+            g.fillRect (selectionRect);
+            g.setColour (colours::accent);
+            g.drawRect (selectionRect, 1);
         }
 
         // pinned track labels
@@ -335,6 +356,31 @@ public:
             return;
         }
 
+        // Ctrl+click/drag: multi-select, independent of the active tool.
+        if (e.mods.isCtrlDown())
+        {
+            if (draggedKind == DragKind::pattern)
+            {
+                if (selectedClips.count (draggedIndex) > 0) selectedClips.erase (draggedIndex);
+                else selectedClips.insert (draggedIndex);
+            }
+            else if (draggedKind == DragKind::audio)
+            {
+                if (selectedAudioClips.count (draggedIndex) > 0) selectedAudioClips.erase (draggedIndex);
+                else selectedAudioClips.insert (draggedIndex);
+            }
+            else
+            {
+                selecting = true;
+                selectionStart = e.getPosition();
+                updateSelectionRect (e.getPosition());
+            }
+            draggedIndex = -1;
+            draggedKind = DragKind::none;
+            repaint();
+            return;
+        }
+
         switch (owner.currentTool)
         {
             case PlaylistPanel::Tool::draw:  drawMouseDown (e, onEdge); break;
@@ -347,6 +393,13 @@ public:
     void mouseDrag (const juce::MouseEvent& e) override
     {
         lastMousePos = e.getPosition();
+
+        if (selecting)
+        {
+            updateSelectionRect (e.getPosition());
+            repaint();
+            return;
+        }
 
         if (owner.currentTool == PlaylistPanel::Tool::paint)
         {
@@ -401,6 +454,12 @@ public:
 
     void mouseUp (const juce::MouseEvent&) override
     {
+        if (selecting)
+        {
+            selecting = false;
+            repaint();
+            return;
+        }
         draggedIndex = -1;
         draggedKind = DragKind::none;
         paintedCells.clear();
@@ -414,8 +473,16 @@ public:
 
     bool keyPressed (const juce::KeyPress& key) override
     {
-        if (key == juce::KeyPress::deleteKey || key == juce::KeyPress::backspaceKey)
+        const int code = key.getKeyCode();
+
+        if (code == juce::KeyPress::deleteKey || code == juce::KeyPress::backspaceKey)
         {
+            if (! selectedClips.empty() || ! selectedAudioClips.empty())
+            {
+                deleteSelected();
+                return true;
+            }
+
             bool onEdge = false;
             if (const int i = audioClipIndexAt (lastMousePos, onEdge); i >= 0)
             {
@@ -434,6 +501,12 @@ public:
                 return true;
             }
             return false;
+        }
+
+        if (key == juce::KeyPress ('d', juce::ModifierKeys::ctrlModifier, 0))
+        {
+            cloneSelectionOrHovered();
+            return true;
         }
 
         if (key == juce::KeyPress ('1', juce::ModifierKeys(), 0)) { owner.setTool (PlaylistPanel::Tool::draw);  return true; }
@@ -464,6 +537,99 @@ public:
     bool changed = false;
     juce::Point<int> lastMousePos;
     std::set<std::pair<int, int>> paintedCells;   // (track, cellStartTick) touched this drag gesture
+
+    // Ctrl+drag rubber-band multi-select (tool-independent, like right-click).
+    // Ctrl+click toggles a single clip; Ctrl+drag on empty space box-selects.
+    bool selecting = false;
+    juce::Point<int> selectionStart;
+    juce::Rectangle<int> selectionRect;
+    std::set<int> selectedClips, selectedAudioClips;
+
+    void updateSelectionRect (juce::Point<int> current)
+    {
+        selectionRect = juce::Rectangle<int> (selectionStart, current);
+        selectedClips.clear();
+        selectedAudioClips.clear();
+
+        auto& project = owner.context.project;
+        for (size_t i = 0; i < project.clips.size(); ++i)
+            if (clipRect (project.clips[i]).getSmallestIntegerContainer().intersects (selectionRect))
+                selectedClips.insert ((int) i);
+        for (size_t i = 0; i < project.audioClips.size(); ++i)
+            if (audioRect (project.audioClips[i]).getSmallestIntegerContainer().intersects (selectionRect))
+                selectedAudioClips.insert ((int) i);
+    }
+
+    // Erases in descending order so earlier indices in the same call stay valid.
+    void deleteSelected()
+    {
+        auto& project = owner.context.project;
+        for (auto it = selectedAudioClips.rbegin(); it != selectedAudioClips.rend(); ++it)
+            if (*it >= 0 && *it < (int) project.audioClips.size())
+                project.audioClips.erase (project.audioClips.begin() + *it);
+        for (auto it = selectedClips.rbegin(); it != selectedClips.rend(); ++it)
+            if (*it >= 0 && *it < (int) project.clips.size())
+                project.clips.erase (project.clips.begin() + *it);
+        selectedClips.clear();
+        selectedAudioClips.clear();
+        owner.context.contentChanged();
+        updateSize();
+        repaint();
+    }
+
+    // Clones the selection (or, if nothing is selected, the clip under the
+    // cursor) shifted to start right after the group's current end.
+    void cloneSelectionOrHovered()
+    {
+        auto& project = owner.context.project;
+
+        if (selectedClips.empty() && selectedAudioClips.empty())
+        {
+            bool onEdge = false;
+            if (const int i = audioClipIndexAt (lastMousePos, onEdge); i >= 0)
+                selectedAudioClips.insert (i);
+            else if (const int i = clipIndexAt (lastMousePos, onEdge); i >= 0)
+                selectedClips.insert (i);
+            else
+                return;
+        }
+
+        int minStart = std::numeric_limits<int>::max();
+        int maxEnd = 0;
+        for (int i : selectedClips)
+        {
+            minStart = juce::jmin (minStart, project.clips[(size_t) i].startTick);
+            maxEnd   = juce::jmax (maxEnd, project.clips[(size_t) i].endTick());
+        }
+        for (int i : selectedAudioClips)
+        {
+            minStart = juce::jmin (minStart, project.audioClips[(size_t) i].startTick);
+            maxEnd   = juce::jmax (maxEnd, project.audioClips[(size_t) i].endTick());
+        }
+        const int shift = maxEnd - minStart;
+
+        std::set<int> newClips, newAudioClips;
+        for (int i : selectedClips)
+        {
+            auto clone = project.clips[(size_t) i];
+            clone.startTick += shift;
+            project.clips.push_back (clone);
+            newClips.insert ((int) project.clips.size() - 1);
+        }
+        for (int i : selectedAudioClips)
+        {
+            auto clone = project.audioClips[(size_t) i];
+            clone.startTick += shift;
+            project.audioClips.push_back (clone);
+            newAudioClips.insert ((int) project.audioClips.size() - 1);
+        }
+
+        selectedClips = std::move (newClips);
+        selectedAudioClips = std::move (newAudioClips);
+        owner.context.contentChanged();
+        updateSize();
+        repaint();
+    }
 
 private:
     void drawMouseDown (const juce::MouseEvent& e, bool onEdge)
@@ -660,6 +826,8 @@ private:
             if (clipIndex >= 0 && clipIndex < (int) owner.context.project.clips.size())
             {
                 owner.context.project.clips.erase (owner.context.project.clips.begin() + clipIndex);
+                selectedClips.clear();          // indices after clipIndex just shifted
+                selectedAudioClips.clear();
                 owner.context.contentChanged();
                 updateSize();
                 repaint();
@@ -710,6 +878,8 @@ private:
             if (clipIndex >= 0 && clipIndex < (int) owner.context.project.audioClips.size())
             {
                 owner.context.project.audioClips.erase (owner.context.project.audioClips.begin() + clipIndex);
+                selectedClips.clear();
+                selectedAudioClips.clear();
                 owner.context.contentChanged();
                 updateSize();
                 repaint();
@@ -753,7 +923,8 @@ PlaylistPanel::PlaylistPanel (AppContext& ctx) : context (ctx)
     for (auto* b : { &drawToolButton, &paintToolButton, &sliceToolButton, &muteToolButton })
         addAndMakeVisible (*b);
 
-    hintLabel.setText ("right-click: delete/route   seek: click ruler   1-4: switch tool",
+    hintLabel.setText ("right-click: delete/route   1-4: switch tool   "
+                       "Ctrl+drag: select   Ctrl+D: clone   Del: delete selected",
                        juce::dontSendNotification);
     hintLabel.setColour (juce::Label::textColourId, colours::textDim);
     hintLabel.setFont (juce::Font (juce::FontOptions (11.0f)));
