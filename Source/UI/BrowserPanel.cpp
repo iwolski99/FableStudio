@@ -262,6 +262,15 @@ void BrowserPanel::fileDoubleClicked (const juce::File& file)
         context.showStatusMessage ("Added sampler channel: " + file.getFileName());
 }
 
+void BrowserPanel::fileClicked (const juce::File& file, const juce::MouseEvent&)
+{
+    if (file.isDirectory())
+        return;
+
+    if (context.isSupportedAudioFile (file))
+        context.engine.previewSampleFile (file);
+}
+
 void BrowserPanel::paint (juce::Graphics& g)
 {
     g.fillAll (colours::panelDark.darker (0.1f));

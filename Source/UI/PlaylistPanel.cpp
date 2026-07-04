@@ -59,6 +59,21 @@ private:
     std::map<juce::String, std::unique_ptr<juce::AudioThumbnail>> thumbnails;
 };
 
+class PlaylistPanel::PatternRenameMouseListener : public juce::MouseListener
+{
+public:
+    explicit PatternRenameMouseListener (PlaylistPanel& ownerToUse) : owner (ownerToUse) {}
+
+    void mouseUp (const juce::MouseEvent& e) override
+    {
+        if (e.mods.isPopupMenu())
+            owner.renameSelectedPattern();
+    }
+
+private:
+    PlaylistPanel& owner;
+};
+
 class PlaylistPanel::ClipArea : public juce::Component
 {
 public:
@@ -344,42 +359,22 @@ public:
         {
             if (draggedIndex >= 0)
             {
-                if (draggedKind == DragKind::pattern)
-                {
-                    showPatternClipMenu (draggedIndex);
-                    return;
-                }
-                if (draggedKind == DragKind::audio)
+                if (draggedKind == DragKind::audio && e.mods.isShiftDown())
                 {
                     showAudioClipMenu (draggedIndex);
                     return;
                 }
+
+                deleteClipAt (e.getPosition());
             }
             return;
         }
 
-        // Ctrl+click/drag: multi-select, independent of the active tool.
-        if (e.mods.isCtrlDown())
+        if (e.mods.isCtrlDown() && e.mods.isLeftButtonDown() && draggedIndex >= 0)
         {
-            if (draggedKind == DragKind::pattern)
-            {
-                if (selectedClips.count (draggedIndex) > 0) selectedClips.erase (draggedIndex);
-                else selectedClips.insert (draggedIndex);
-            }
-            else if (draggedKind == DragKind::audio)
-            {
-                if (selectedAudioClips.count (draggedIndex) > 0) selectedAudioClips.erase (draggedIndex);
-                else selectedAudioClips.insert (draggedIndex);
-            }
-            else
-            {
-                selecting = true;
-                selectionStart = e.getPosition();
-                updateSelectionRect (e.getPosition());
-            }
+            toggleMuteAt (e.getPosition());
             draggedIndex = -1;
             draggedKind = DragKind::none;
-            repaint();
             return;
         }
 
@@ -400,6 +395,12 @@ public:
         {
             updateSelectionRect (e.getPosition());
             repaint();
+            return;
+        }
+
+        if (e.mods.isRightButtonDown())
+        {
+            deleteClipAt (e.getPosition());
             return;
         }
 
@@ -798,47 +799,50 @@ private:
             repaint();
             return;
         }
+
         if (const int i = clipIndexAt (pos, onEdge); i >= 0)
         {
-            owner.context.project.clips[(size_t) i].muted = ! owner.context.project.clips[(size_t) i].muted;
+            owner.context.project.clips[(size_t) i].muted =
+                ! owner.context.project.clips[(size_t) i].muted;
             owner.context.contentChanged();
             repaint();
         }
     }
 
-    void showPatternClipMenu (int clipIndex)
+    void deleteClipAt (juce::Point<int> pos)
     {
-        auto& clips = owner.context.project.clips;
-        if (clipIndex < 0 || clipIndex >= (int) clips.size())
+        bool onEdge = false;
+        if (const int index = audioClipIndexAt (pos, onEdge); index >= 0)
+        {
+            owner.context.project.audioClips.erase (owner.context.project.audioClips.begin() + index);
+            selectedClips.clear();
+            selectedAudioClips.clear();
+            owner.context.contentChanged();
+            updateSize();
+            repaint();
+            draggedIndex = -1;
+            draggedKind = DragKind::none;
+            changed = false;
             return;
+        }
 
-        juce::PopupMenu m;
-        m.addItem (clips[(size_t) clipIndex].muted ? "Unmute" : "Mute", [this, clipIndex]
+        if (const int index = clipIndexAt (pos, onEdge); index >= 0)
         {
-            if (clipIndex >= 0 && clipIndex < (int) owner.context.project.clips.size())
-            {
-                owner.context.project.clips[(size_t) clipIndex].muted =
-                    ! owner.context.project.clips[(size_t) clipIndex].muted;
-                owner.context.contentChanged();
-                repaint();
-            }
-        });
-        m.addItem ("Delete pattern clip", [this, clipIndex]
-        {
-            if (clipIndex >= 0 && clipIndex < (int) owner.context.project.clips.size())
-            {
-                owner.context.project.clips.erase (owner.context.project.clips.begin() + clipIndex);
-                selectedClips.clear();          // indices after clipIndex just shifted
-                selectedAudioClips.clear();
-                owner.context.contentChanged();
-                updateSize();
-                repaint();
-            }
-        });
+            owner.context.project.clips.erase (owner.context.project.clips.begin() + index);
+            selectedClips.clear();
+            selectedAudioClips.clear();
+            owner.context.contentChanged();
+            updateSize();
+            repaint();
+            draggedIndex = -1;
+            draggedKind = DragKind::none;
+            changed = false;
+        }
+    }
 
-        m.showMenuAsync (juce::PopupMenu::Options().withTargetComponent (this));
-        draggedIndex = -1;
-        draggedKind = DragKind::none;
+    void toggleMuteAt (juce::Point<int> pos)
+    {
+        muteAt (pos);
     }
 
     void showAudioClipMenu (int clipIndex)
@@ -899,7 +903,9 @@ private:
 PlaylistPanel::PlaylistPanel (AppContext& ctx) : context (ctx)
 {
     waveformCache = std::make_unique<WaveformCache> (context);
+    patternRenameListener = std::make_unique<PatternRenameMouseListener> (*this);
 
+    patternBox.addMouseListener (patternRenameListener.get(), false);
     patternBox.onChange = [this]
     {
         const int index = patternBox.getSelectedItemIndex();
@@ -907,6 +913,13 @@ PlaylistPanel::PlaylistPanel (AppContext& ctx) : context (ctx)
             context.selectPattern (index);
     };
     addAndMakeVisible (patternBox);
+
+    addPatternButton.onClick = [this]
+    {
+        context.project.addPattern();
+        context.selectPattern ((int) context.project.patterns.size() - 1);
+    };
+    addAndMakeVisible (addPatternButton);
 
     snapBox.addItem ("Snap: bar",  kTicksPerBar);
     snapBox.addItem ("Snap: beat", kPPQ);
@@ -925,8 +938,7 @@ PlaylistPanel::PlaylistPanel (AppContext& ctx) : context (ctx)
     for (auto* b : { &drawToolButton, &paintToolButton, &sliceToolButton, &muteToolButton })
         addAndMakeVisible (*b);
 
-    hintLabel.setText ("right-click: delete/route   1-4: switch tool   "
-                       "Ctrl+drag: select   Ctrl+D: clone   Del: delete selected",
+    hintLabel.setText ("tools: 1-4   Ctrl+left: mute   right-drag/right-click: delete   Shift+right audio: route",
                        juce::dontSendNotification);
     hintLabel.setColour (juce::Label::textColourId, colours::textDim);
     hintLabel.setFont (juce::Font (juce::FontOptions (11.0f)));
@@ -992,6 +1004,30 @@ void PlaylistPanel::refreshToolButtons()
     style (muteToolButton,  Tool::mute);
 }
 
+void PlaylistPanel::renameSelectedPattern()
+{
+    auto* pattern = context.selectedPattern();
+    if (pattern == nullptr)
+        return;
+
+    auto* editor = new juce::AlertWindow ("Rename pattern", {}, juce::MessageBoxIconType::NoIcon);
+    editor->addTextEditor ("name", pattern->name);
+    editor->addButton ("OK", 1, juce::KeyPress (juce::KeyPress::returnKey));
+    editor->addButton ("Cancel", 0, juce::KeyPress (juce::KeyPress::escapeKey));
+    editor->enterModalState (true, juce::ModalCallbackFunction::create ([this, editor] (int result)
+    {
+        if (result == 1)
+            if (auto* current = context.selectedPattern())
+            {
+                current->name = editor->getTextEditorContents ("name").trim();
+                if (current->name.isEmpty())
+                    current->name = "Pattern " + juce::String (context.selectedPatternIndex + 1);
+                context.structureChanged();
+            }
+        delete editor;
+    }), false);
+}
+
 void PlaylistPanel::timerCallback()
 {
     if (context.engine.isPlaying() && context.engine.isSongMode())
@@ -1030,6 +1066,8 @@ void PlaylistPanel::resized()
 
     auto headerArea = area.removeFromTop (30).reduced (4, 3);
     patternBox.setBounds (headerArea.removeFromLeft (170));
+    headerArea.removeFromLeft (8);
+    addPatternButton.setBounds (headerArea.removeFromLeft (28));
     headerArea.removeFromLeft (8);
     snapBox.setBounds (headerArea.removeFromLeft (130));
     headerArea.removeFromLeft (10);

@@ -23,8 +23,8 @@ void ChannelNode::setSynthGenerator()
 void ChannelNode::setSamplerGenerator (juce::AudioBuffer<float>&& sample, double sourceRate, int rootNote)
 {
     auto s = std::make_unique<juce::Synthesiser>();
-    for (int i = 0; i < 16; ++i)
-        s->addVoice (new FableSamplerVoice());
+    s->setNoteStealingEnabled (true);
+    s->addVoice (new FableSamplerVoice());
     s->addSound (new FableSamplerSound (std::move (sample), sourceRate, rootNote));
     plugin.reset();
     synth = std::move (s);

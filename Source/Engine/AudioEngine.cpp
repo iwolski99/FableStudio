@@ -415,6 +415,32 @@ void AudioEngine::auditionNoteOff (int channelId, int pitch)
         auditionEvents[(size_t) scope.startIndex1] = { channelId, pitch, 0.0f, false };
 }
 
+void AudioEngine::previewSampleFile (const juce::File& file, int rootNote)
+{
+    double sourceRate = currentSampleRate > 0.0 ? currentSampleRate : 44100.0;
+    auto sample = loadSampleFile (file, formatManager, sourceRate);
+    if (sample.getNumSamples() <= 0)
+        return;
+
+    auto node = std::make_shared<ChannelNode> (-1);
+    node->setSamplerGenerator (std::move (sample), sourceRate, rootNote);
+    Channel previewChannel;
+    previewChannel.mixerTrack = 0;
+    node->updateFromModel (previewChannel);
+    if (deviceRunning)
+        node->prepare (currentSampleRate, currentBlockSize);
+    node->midiBuffer.addEvent (juce::MidiMessage::noteOn (1, rootNote, (juce::uint8) 110), 0);
+
+    const juce::SpinLock::ScopedLockType sl (previewNodeLock);
+    previewNode = std::move (node);
+}
+
+void AudioEngine::stopPreviewSample()
+{
+    const juce::SpinLock::ScopedLockType sl (previewNodeLock);
+    previewNode.reset();
+}
+
 // ------------------------------------------------------------- audio thread
 
 void AudioEngine::audioDeviceAboutToStart (juce::AudioIODevice* device)
@@ -426,6 +452,11 @@ void AudioEngine::audioDeviceAboutToStart (juce::AudioIODevice* device)
     auto set = copyRenderSet();
     for (auto& n : set->channels) n->prepare (currentSampleRate, currentBlockSize);
     for (auto& b : set->buses)    b->prepare (currentSampleRate, currentBlockSize);
+    {
+        const juce::SpinLock::ScopedLockType sl (previewNodeLock);
+        if (previewNode != nullptr)
+            previewNode->prepare (currentSampleRate, currentBlockSize);
+    }
 }
 
 void AudioEngine::audioDeviceStopped()
@@ -455,6 +486,13 @@ void AudioEngine::processBlock (juce::AudioBuffer<float>& output)
     auto* set = audioThreadSet.get();
     if (set == nullptr)
         return;
+
+    std::shared_ptr<ChannelNode> preview;
+    {
+        const juce::SpinLock::ScopedTryLockType sl (previewNodeLock);
+        if (sl.isLocked())
+            preview = previewNode;
+    }
 
     SinkAdapter sink (*set);
     double audioClipBlockStartTick = sequencer.getPositionTicks();
@@ -521,6 +559,9 @@ void AudioEngine::processBlock (juce::AudioBuffer<float>& output)
         const int busIndex = juce::jlimit (0, (int) set->buses.size() - 1, node->getMixerTrack());
         node->render (numSamples, set->buses[(size_t) busIndex]->buffer);
     }
+
+    if (preview != nullptr)
+        preview->render (numSamples, set->buses[0]->buffer);
 
     // solo logic: if any insert is soloed, mute the others
     bool anySolo = false;

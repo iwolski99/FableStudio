@@ -74,9 +74,21 @@ void FloatingPanel::mouseDrag (const juce::MouseEvent& e)
 
 void FloatingPanel::mouseDoubleClick (const juce::MouseEvent& e)
 {
-    // double-click title bar: expand to fill the workspace
-    if (e.getPosition().y < kTitleHeight && getParentComponent() != nullptr)
+    if (e.getPosition().y >= kTitleHeight || getParentComponent() == nullptr)
+        return;
+
+    if (! maximized)
+    {
+        restoredBounds = getBounds();
         setBounds (getParentComponent()->getLocalBounds().reduced (8));
+        maximized = true;
+    }
+    else
+    {
+        if (! restoredBounds.isEmpty())
+            setBounds (restoredBounds);
+        maximized = false;
+    }
 }
 
 void FloatingPanel::toFrontAndShow()

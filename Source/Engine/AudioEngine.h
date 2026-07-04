@@ -68,6 +68,8 @@ public:
     // UI note audition
     void auditionNoteOn  (int channelId, int pitch, float velocity);
     void auditionNoteOff (int channelId, int pitch);
+    void previewSampleFile (const juce::File& file, int rootNote = kDefaultRootNote);
+    void stopPreviewSample();
 
     // --- offline export (message thread; engine must not be playing) ------
     bool renderToWav (Project& project, const juce::File& outFile, bool songModeRender,
@@ -117,6 +119,9 @@ private:
     struct AuditionEvent { int channelId, pitch; float velocity; bool isOn; };
     juce::AbstractFifo auditionFifo { 256 };
     std::array<AuditionEvent, 256> auditionEvents;
+
+    mutable juce::SpinLock previewNodeLock;
+    std::shared_ptr<ChannelNode> previewNode;
 
     double currentSampleRate = 44100.0;
     int    currentBlockSize  = 512;

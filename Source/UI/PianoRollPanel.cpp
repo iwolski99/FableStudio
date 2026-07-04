@@ -215,14 +215,7 @@ public:
 
         if (e.mods.isPopupMenu())
         {
-            if (draggedIndex >= 0)
-            {
-                notes->erase (notes->begin() + draggedIndex);
-                draggedIndex = -1;
-                selectedNotes.clear();   // indices after it just shifted
-                owner.context.contentChanged();
-                repaint();
-            }
+            deleteNoteAt (e.getPosition());
             return;
         }
 
@@ -277,6 +270,12 @@ public:
         {
             updateSelectionRect (e.getPosition());
             repaint();
+            return;
+        }
+
+        if (e.mods.isRightButtonDown())
+        {
+            deleteNoteAt (e.getPosition());
             return;
         }
 
@@ -505,6 +504,22 @@ public:
     juce::Point<int> selectionStart;
     juce::Rectangle<int> selectionRect;
     std::set<int> selectedNotes;
+
+private:
+    void deleteNoteAt (juce::Point<int> pos)
+    {
+        bool onEdge = false;
+        const int index = noteIndexAt (pos, onEdge);
+        if (auto* notes = owner.currentNotes(); notes != nullptr && index >= 0)
+        {
+            notes->erase (notes->begin() + index);
+            draggedIndex = -1;
+            selectedNotes.clear();
+            owner.context.contentChanged();
+            repaint();
+            repaintVelocityLane();
+        }
+    }
 };
 
 // ------------------------------------------------------------- velocity lane

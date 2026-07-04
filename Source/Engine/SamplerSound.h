@@ -8,6 +8,8 @@ namespace fable
 
 // Minimal pitched sample playback: one sample per channel, repitched around a
 // root note, velocity-scaled, with a short release fade to avoid clicks.
+// Sampler channels are intentionally mono-voice so retriggers cut the previous
+// sample like FL's common "Cut itself" workflow for drums/808s.
 // (juce::SamplerSound exists but this keeps full control and stays trivial.)
 
 class FableSamplerSound : public juce::SynthesiserSound
@@ -50,13 +52,14 @@ public:
 
     void stopNote (float, bool allowTailOff) override
     {
-        if (allowTailOff && sound != nullptr)
-            releasing = true;    // quick fade instead of hard cut
-        else
+        if (! allowTailOff)
         {
             clearCurrentNote();
             sound = nullptr;
         }
+        // Ignore normal note-offs so step-sequenced samples play their full
+        // audio file. Retriggers cut the previous voice because the sampler is
+        // intentionally single-voice.
     }
 
     void pitchWheelMoved (int) override {}

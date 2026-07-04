@@ -36,6 +36,7 @@ public:
 
 private:
     class ClipArea;
+    class PatternRenameMouseListener;
     class WaveformCache;
 
     void changeListenerCallback (juce::ChangeBroadcaster*) override;
@@ -43,12 +44,15 @@ private:
     void refreshHeader();
     void setTool (Tool t);
     void refreshToolButtons();
+    void renameSelectedPattern();
 
     AppContext& context;
     juce::Label hintLabel;
     juce::ComboBox patternBox, snapBox;
     juce::TextButton drawToolButton { "Draw" }, paintToolButton { "Paint" },
                      sliceToolButton { "Slice" }, muteToolButton { "Mute" };
+    juce::TextButton addPatternButton { "+" };
+    std::unique_ptr<PatternRenameMouseListener> patternRenameListener;
     juce::Viewport viewport;
     std::unique_ptr<ClipArea> clipArea;
     std::unique_ptr<WaveformCache> waveformCache;

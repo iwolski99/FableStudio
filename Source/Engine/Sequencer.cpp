@@ -79,7 +79,7 @@ std::shared_ptr<const PlaybackData> compilePlayback (const Project& p,
 
     for (auto& c : p.audioClips)
     {
-        if (c.filePath.isEmpty())
+        if (c.muted || c.filePath.isEmpty())
             continue;
 
         CompiledAudioClip clip;
