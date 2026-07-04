@@ -49,13 +49,31 @@ public:
             setContentOwned (new MainComponent(), true);
             setResizable (true, true);
             setResizeLimits (960, 600, 10000, 10000);
-            centreWithSize (getWidth(), getHeight());
+
+            // Fit within the actual screen instead of always opening at a fixed
+            // 1440x860 - on a smaller/scaled display that could put the title bar
+            // off-screen with no way to drag it back or resize.
+            const auto userArea = juce::Desktop::getInstance().getDisplays().getPrimaryDisplay()->userArea;
+            const int w = juce::jmin (getWidth(),  userArea.getWidth()  - 40);
+            const int h = juce::jmin (getHeight(), userArea.getHeight() - 40);
+            setBounds (userArea.withSizeKeepingCentre (juce::jmax (960, w), juce::jmax (600, h)));
+
             setVisible (true);
         }
 
         void closeButtonPressed() override
         {
             juce::JUCEApplication::getInstance()->systemRequestedQuit();
+        }
+
+        bool keyPressed (const juce::KeyPress& key) override
+        {
+            if (key.getKeyCode() == juce::KeyPress::F11Key)
+            {
+                setFullScreen (! isFullScreen());
+                return true;
+            }
+            return juce::DocumentWindow::keyPressed (key);
         }
 
     private:
