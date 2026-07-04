@@ -30,6 +30,7 @@ public:
 
     void  startScan();
     void  stopScan();
+    void  scanSynchronously();   // blocking scan on the calling thread (headless tools)
     bool  isScanning() const        { return isThreadRunning(); }
     float getScanProgress() const   { return scanProgress.load(); }
     juce::String getCurrentlyScannedPlugin() const;

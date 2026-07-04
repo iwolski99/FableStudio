@@ -62,7 +62,14 @@ FableTool test                       # unit tests
 FableTool render song.fable out.wav  # offline render (song mode)
 FableTool render-demo out.wav        # render the built-in demo groove
 FableTool write-demo demo.fable      # write the demo project file
+FableTool scan                       # scan default + user VST3 folders, list results
+FableTool render-vst-test out.wav    # full VST3 hosting check (scan, load, render)
 ```
+
+Configuring with `-DFABLE_BUILD_TEST_PLUGIN=ON` additionally builds
+**FableTestTone**, a minimal VST3 instrument used by CI to prove plugin
+scanning and hosting end-to-end (install it to `~/.vst3` and run
+`FableTool render-vst-test`).
 
 ## First steps
 

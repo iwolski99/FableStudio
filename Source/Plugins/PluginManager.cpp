@@ -52,6 +52,19 @@ void PluginManager::stopScan()
     stopThread (5000);
 }
 
+void PluginManager::scanSynchronously()
+{
+    auto* format = formatManager.getFormat (0);
+    if (format == nullptr)
+        return;
+
+    juce::PluginDirectoryScanner scanner (knownPlugins, *format, getSearchPath(),
+                                          true, deadMansFile(), false);
+    juce::String pluginBeingScanned;
+    while (scanner.scanNextFile (true, pluginBeingScanned)) {}
+    saveList();
+}
+
 juce::String PluginManager::getCurrentlyScannedPlugin() const
 {
     const juce::ScopedLock sl (scanNameLock);

@@ -63,6 +63,15 @@ jobs:
           ./build/FableTool_artefacts/Release/FableTool render-demo demo.wav
           test -s demo.wav
 
+      - name: VST3 hosting test
+        if: runner.os == 'Linux'
+        run: |
+          cmake -B build -DCMAKE_BUILD_TYPE=Release -DFABLE_BUILD_TEST_PLUGIN=ON
+          cmake --build build --config Release --target FableTestTone_VST3 --parallel 4
+          mkdir -p ~/.vst3
+          cp -r build/FableTestTone_artefacts/Release/VST3/FableTestTone.vst3 ~/.vst3/
+          ./build/FableTool_artefacts/Release/FableTool render-vst-test vst-test.wav
+
       - name: Upload binaries
         uses: actions/upload-artifact@v4
         with:

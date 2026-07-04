@@ -115,3 +115,28 @@ target_compile_definitions(FableTool PRIVATE
 )
 target_link_libraries(FableTool PRIVATE ${FABLE_JUCE_MODULES}
     juce::juce_recommended_config_flags)
+
+# ------------------------------------- test VST3 (verifies hosting end-to-end)
+option(FABLE_BUILD_TEST_PLUGIN "Build the FableTestTone VST3 used to verify plugin hosting" OFF)
+
+if(FABLE_BUILD_TEST_PLUGIN)
+    juce_add_plugin(FableTestTone
+        FORMATS VST3
+        IS_SYNTH TRUE
+        NEEDS_MIDI_INPUT TRUE
+        COMPANY_NAME "FableStudio"
+        PLUGIN_MANUFACTURER_CODE Fbls
+        PLUGIN_CODE Ftst
+        PRODUCT_NAME "FableTestTone"
+    )
+    target_sources(FableTestTone PRIVATE TestPlugin/TestToneProcessor.cpp)
+    target_compile_definitions(FableTestTone PUBLIC
+        JUCE_WEB_BROWSER=0
+        JUCE_USE_CURL=0
+        JUCE_VST3_CAN_REPLACE_VST2=0
+        JUCE_DISPLAY_SPLASH_SCREEN=0)
+    target_link_libraries(FableTestTone PRIVATE
+        juce::juce_audio_processors
+        juce::juce_audio_utils
+        juce::juce_recommended_config_flags)
+endif()
