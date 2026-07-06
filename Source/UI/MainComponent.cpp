@@ -9,7 +9,7 @@ namespace menuIds
     enum
     {
         fileNew = 1, fileOpen, fileSave, fileSaveAs, fileExport, fileExit,
-        optSettings, optScanPlugins,
+        optSettings, optScanPlugins, optTypingKeyboard,
         viewChannelRack, viewPianoRoll, viewPlaylist, viewMixer,
         helpAbout,
     };
@@ -175,6 +175,10 @@ juce::PopupMenu MainComponent::getMenuForIndex (int, const juce::String& menuNam
     {
         m.addItem (menuIds::optSettings,    "Audio & plugin settings...");
         m.addItem (menuIds::optScanPlugins, "Scan for VST3 plugins");
+        m.addSeparator();
+        m.addItem (menuIds::optTypingKeyboard,
+                   "Typing keyboard plays selected instrument (Z-M row, PgUp/PgDn octave)",
+                   true, keyboardPlayer.isEnabled());
     }
     else if (menuName == "View")
     {
@@ -205,6 +209,10 @@ void MainComponent::menuItemSelected (int menuItemID, int)
         case menuIds::optScanPlugins: context.plugins.startScan();
                                       showStatus ("Scanning VST3 folders in the background...");
                                       break;
+        case menuIds::optTypingKeyboard:
+            keyboardPlayer.setEnabled (! keyboardPlayer.isEnabled());
+            showStatus (juce::String ("Typing keyboard ") + (keyboardPlayer.isEnabled() ? "enabled" : "disabled"));
+            break;
 
         case menuIds::viewPlaylist:    togglePanel (playlistPanel); break;
         case menuIds::viewChannelRack: togglePanel (channelRackPanel); break;
@@ -216,7 +224,8 @@ void MainComponent::menuItemSelected (int menuItemID, int)
                 "FableStudio",
                 "An open-source pattern-based DAW with VST3 support.\n"
                 "Workflow inspired by classic pattern DAWs; all original code.\n\n"
-                "Space: play/stop   F5-F9: panels   PAT/SONG: loop mode");
+                "Space: play/stop   F5-F9: panels   PAT/SONG: loop mode\n"
+                "Z-M row: play the selected channel   PgUp/PgDn: octave");
             break;
 
         default: break;

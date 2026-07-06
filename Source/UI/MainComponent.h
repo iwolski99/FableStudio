@@ -5,6 +5,7 @@
 #include "AppContext.h"
 #include "BrowserPanel.h"
 #include "ChannelRackPanel.h"
+#include "ComputerKeyboardPlayer.h"
 #include "FloatingPanel.h"
 #include "MixerPanel.h"
 #include "PianoRollPanel.h"
@@ -81,6 +82,7 @@ private:
 
     std::vector<std::unique_ptr<PluginWindow>> pluginWindows;
     std::unique_ptr<juce::FileChooser> chooser;
+    ComputerKeyboardPlayer keyboardPlayer { context };
 
     juce::String statusMessage;
     juce::uint32 statusMessageTime = 0;

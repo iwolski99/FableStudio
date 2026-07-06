@@ -52,6 +52,7 @@ set(FABLE_UI_SOURCES
     Source/UI/BrowserPanel.cpp
     Source/UI/SettingsDialog.cpp
     Source/UI/PluginWindow.cpp
+    Source/UI/ComputerKeyboardPlayer.cpp
 )
 
 set(FABLE_JUCE_MODULES
