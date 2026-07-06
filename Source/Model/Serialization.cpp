@@ -138,6 +138,7 @@ juce::var projectToVar (const Project& p)
         o->setProperty ("length", c.lengthTicks);
         o->setProperty ("srcOffset", c.sourceOffsetTicks);
         o->setProperty ("muted", c.muted);
+        o->setProperty ("unique", c.uniqueSettings);
         audioClips.add (o.get());
     }
     root->setProperty ("audioClips", audioClips);
@@ -284,6 +285,7 @@ bool projectFromVar (const juce::var& v, Project& out)
             c.lengthTicks = juce::jmax (1, (int) cv["length"]);
             c.sourceOffsetTicks = juce::jmax (0, (int) cv["srcOffset"]);
             c.muted       = (bool) cv["muted"];
+            c.uniqueSettings = (bool) cv["unique"];
             if (c.filePath.isNotEmpty())
                 p.audioClips.push_back (std::move (c));
         }

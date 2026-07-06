@@ -17,7 +17,11 @@ public:
         : juce::DocumentWindow (title, colours::titlebar, juce::DocumentWindow::closeButton),
           plugin (instance), onClose (std::move (onCloseToUse))
     {
-        setUsingNativeTitleBar (true);
+        // A JUCE-drawn title bar (not native) guarantees the window is draggable
+        // by its title bar on every platform - native-title-bar plugin windows
+        // could end up stuck/immovable depending on the window manager.
+        setUsingNativeTitleBar (false);
+        setTitleBarHeight (26);
 
         juce::AudioProcessorEditor* editor = plugin.hasEditor()
             ? plugin.createEditorIfNeeded()
@@ -27,8 +31,11 @@ public:
 
         setContentOwned (editor, true);
         setResizable (editor->isResizable(), false);
+        // Keep at least the title bar on-screen so it can always be grabbed.
+        setConstrainer (&constrainer);
+        constrainer.setMinimumOnscreenAmounts (26, 48, 26, 48);
         centreWithSize (juce::jmax (300, editor->getWidth()),
-                        juce::jmax (150, editor->getHeight()));
+                        juce::jmax (150, editor->getHeight()) + 26);
         setVisible (true);
         toFront (true);
     }
@@ -44,6 +51,7 @@ public:
 private:
     juce::AudioPluginInstance& plugin;
     std::function<void (PluginWindow*)> onClose;
+    juce::ComponentBoundsConstrainer constrainer;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (PluginWindow)
 };

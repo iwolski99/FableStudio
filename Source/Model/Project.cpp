@@ -127,4 +127,33 @@ Project createDefaultProject()
     return p;
 }
 
+Project createEmptyProject()
+{
+    Project p;
+    p.bpm = 140.0;
+
+    // Instruments ready to use, but nothing programmed.
+    const int kickId  = p.addChannel (GeneratorType::sampler, "Kick");
+    const int clapId  = p.addChannel (GeneratorType::sampler, "Clap");
+    const int hatId   = p.addChannel (GeneratorType::sampler, "Hat");
+    const int snareId = p.addChannel (GeneratorType::sampler, "Snare");
+    const int synthId = p.addChannel (GeneratorType::synth,   "FableSynth");
+
+    p.channelById (kickId)->samplePath  = "builtin:kick";
+    p.channelById (clapId)->samplePath  = "builtin:clap";
+    p.channelById (hatId)->samplePath   = "builtin:hat";
+    p.channelById (snareId)->samplePath = "builtin:snare";
+
+    p.channelById (kickId)->mixerTrack  = 1;
+    p.channelById (clapId)->mixerTrack  = 2;
+    p.channelById (hatId)->mixerTrack   = 3;
+    p.channelById (snareId)->mixerTrack = 4;
+    p.channelById (synthId)->mixerTrack = 5;
+
+    // One empty pattern, empty arrangement, no default effects.
+    p.addPattern();
+
+    return p;
+}
+
 } // namespace fable

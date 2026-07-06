@@ -219,16 +219,23 @@ void BrowserPanel::listBoxItemDoubleClicked (int row, const juce::MouseEvent&)
     {
         const int id = context.project.addChannel (GeneratorType::plugin, d.name);
         context.project.channelById (id)->pluginIdentifier = d.createIdentifierString();
+        context.selectedChannelId = id;
         context.structureChanged();
         if (context.showStatusMessage)
             context.showStatusMessage ("Added channel: " + d.name);
+        // Pop the instrument's editor open (instance built synchronously).
+        if (auto node = context.engine.getChannelNode (id))
+            if (auto* instance = node->getPluginInstance())
+                if (context.openPluginEditor)
+                    context.openPluginEditor (instance, d.name);
     }
     else
     {
         // add to the selected mixer track's first free slot
         auto& track = context.project.mixerTracks[(size_t) context.selectedMixerTrack];
-        for (auto& slot : track.slots)
+        for (int slotIndex = 0; slotIndex < (int) track.slots.size(); ++slotIndex)
         {
+            auto& slot = track.slots[(size_t) slotIndex];
             if (slot.type == EffectType::none)
             {
                 slot.type = EffectType::plugin;
@@ -237,6 +244,11 @@ void BrowserPanel::listBoxItemDoubleClicked (int row, const juce::MouseEvent&)
                 if (context.showStatusMessage)
                     context.showStatusMessage ("Added " + d.name + " to mixer track "
                                                + juce::String (context.selectedMixerTrack));
+                // Pop the effect's editor open (instance built synchronously).
+                if (auto bus = context.engine.getMixerBus (context.selectedMixerTrack))
+                    if (auto* instance = bus->getSlot (slotIndex).plugin.get())
+                        if (context.openPluginEditor)
+                            context.openPluginEditor (instance, d.name);
                 return;
             }
         }

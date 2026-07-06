@@ -133,6 +133,17 @@ struct AppContext
         clip.track       = track;
         clip.startTick   = startTick;
         clip.lengthTicks = estimateAudioFileLengthTicks (file);
+
+        // FL-style: a new clip of an existing (non-unique) source inherits that
+        // source's shared gain/routing so edits stay consistent across siblings.
+        for (const auto& existing : project.audioClips)
+            if (! existing.uniqueSettings && existing.filePath == clip.filePath)
+            {
+                clip.gain       = existing.gain;
+                clip.mixerTrack = existing.mixerTrack;
+                break;
+            }
+
         project.audioClips.push_back (std::move (clip));
         contentChanged();
     }

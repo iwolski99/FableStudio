@@ -1,4 +1,5 @@
 #include "ChannelRackPanel.h"
+#include "RightClickWidgets.h"
 
 namespace fable
 {
@@ -19,31 +20,6 @@ static juce::File audioFileFromDragSource (const juce::DragAndDropTarget::Source
     return {};
 }
 
-// Child controls (button/sliders) sit on top of the row and would otherwise
-// swallow a right-click before it ever reaches ChannelRow::mouseDown, so
-// right-clicking the channel appeared to do nothing. These forward it back.
-class RightClickButton : public juce::TextButton
-{
-public:
-    using juce::TextButton::TextButton;
-    std::function<void()> onRightClick;
-    void mouseDown (const juce::MouseEvent& e) override
-    {
-        if (e.mods.isPopupMenu()) { if (onRightClick) onRightClick(); return; }
-        juce::TextButton::mouseDown (e);
-    }
-};
-
-class RightClickSlider : public juce::Slider
-{
-public:
-    std::function<void()> onRightClick;
-    void mouseDown (const juce::MouseEvent& e) override
-    {
-        if (e.mods.isPopupMenu()) { if (onRightClick) onRightClick(); return; }
-        juce::Slider::mouseDown (e);
-    }
-};
 
 // ------------------------------------------------------------------ row
 
@@ -107,9 +83,15 @@ public:
         nameButton.onClick = [this]
         {
             context.selectChannel (channelId);
-            if (auto* c = context.project.channelById (channelId); c != nullptr && c->type == GeneratorType::sampler)
+            auto* c = context.project.channelById (channelId);
+            if (c != nullptr && c->type == GeneratorType::sampler)
             {
                 openSamplerSettings();
+                return;
+            }
+            if (c != nullptr && c->type == GeneratorType::plugin)
+            {
+                openPluginEditor();
                 return;
             }
             // audition on select, like clicking a channel button
@@ -283,13 +265,7 @@ public:
         if (channel->type == GeneratorType::plugin)
         {
             m.addSeparator();
-            m.addItem ("Open plugin editor", [this]
-            {
-                if (auto node = context.engine.getChannelNode (channelId))
-                    if (auto* instance = node->getPluginInstance())
-                        if (context.openPluginEditor)
-                            context.openPluginEditor (instance, nameButton.getButtonText());
-            });
+            m.addItem ("Open plugin editor", [this] { openPluginEditor(); });
         }
 
         juce::PopupMenu steps;
@@ -351,6 +327,14 @@ public:
             });
     }
 
+    void openPluginEditor()
+    {
+        if (auto node = context.engine.getChannelNode (channelId))
+            if (auto* instance = node->getPluginInstance())
+                if (context.openPluginEditor)
+                    context.openPluginEditor (instance, nameButton.getButtonText());
+    }
+
     void openSamplerSettings()
     {
         auto* channel = context.project.channelById (channelId);
@@ -367,6 +351,9 @@ public:
             slider->setTextBoxStyle (juce::Slider::TextBoxRight, false, 70, 20);
             slider->setRange (0.0, 5000.0, 1.0);
             slider->setTextValueSuffix (" ms");
+            // AlertWindow lays custom components out at their current size; a
+            // freshly-created slider is 0x0 and would be invisible otherwise.
+            slider->setSize (320, 26);
         }
 
         fadeIn->setValue (channel->sampleFadeInMs, juce::dontSendNotification);
@@ -387,6 +374,8 @@ public:
                     c->sampleFadeOutMs = (float) fadeOut->getValue();
                     context.structureChanged();
                 }
+            delete fadeIn;
+            delete fadeOut;
             delete editor;
         }), false);
     }
@@ -623,7 +612,15 @@ void ChannelRackPanel::addChannelMenu()
             {
                 const int id = context.project.addChannel (GeneratorType::plugin, desc.name);
                 context.project.channelById (id)->pluginIdentifier = desc.createIdentifierString();
+                context.selectedChannelId = id;
                 context.structureChanged();
+
+                // Instrument instance is built synchronously by structureChanged;
+                // pop its editor open like FL does when you add a generator.
+                if (auto node = context.engine.getChannelNode (id))
+                    if (auto* instance = node->getPluginInstance())
+                        if (context.openPluginEditor)
+                            context.openPluginEditor (instance, desc.name);
             });
         }
     }

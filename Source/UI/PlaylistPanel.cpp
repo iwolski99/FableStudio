@@ -391,6 +391,15 @@ public:
             return;
         }
 
+        // Plain left-click on a pattern clip selects that pattern in the picker,
+        // so the next clip you draw is the same pattern (FL workflow).
+        if (draggedKind == DragKind::pattern && draggedIndex >= 0 && e.mods.isLeftButtonDown())
+        {
+            const int pi = project.clips[(size_t) draggedIndex].patternIndex;
+            if (pi >= 0 && pi < (int) project.patterns.size() && pi != owner.context.selectedPatternIndex)
+                owner.context.selectPattern (pi);
+        }
+
         switch (owner.currentTool)
         {
             case PlaylistPanel::Tool::draw:  drawMouseDown (e, onEdge); break;
@@ -428,6 +437,34 @@ public:
             return;
 
         const int snap = snapTicks();
+        auto& project = owner.context.project;
+
+        // Group move: shift every selected clip by the same delta as the anchor.
+        if (draggingGroup && ! resizing)
+        {
+            const int newStart = juce::jmax (0, ((((int) plXToTick (e.getPosition().x) - dragOffsetTicks)
+                                                  + snap / 2) / snap) * snap);
+            const int newTrack = juce::jlimit (0, kNumPlaylistTracks - 1,
+                                               (e.getPosition().y - kRulerHeight) / kTrackHeight);
+            const int dTick  = newStart - dragAnchorStartTick;
+            const int dTrack = newTrack - dragAnchorTrack;
+
+            for (auto& s : groupPatternSnap)
+                if (s.index >= 0 && s.index < (int) project.clips.size())
+                {
+                    project.clips[(size_t) s.index].startTick = juce::jmax (0, s.startTick + dTick);
+                    project.clips[(size_t) s.index].track = juce::jlimit (0, kNumPlaylistTracks - 1, s.track + dTrack);
+                }
+            for (auto& s : groupAudioSnap)
+                if (s.index >= 0 && s.index < (int) project.audioClips.size())
+                {
+                    project.audioClips[(size_t) s.index].startTick = juce::jmax (0, s.startTick + dTick);
+                    project.audioClips[(size_t) s.index].track = juce::jlimit (0, kNumPlaylistTracks - 1, s.track + dTrack);
+                }
+            changed = true;
+            repaint();
+            return;
+        }
 
         auto applyDrag = [&] (auto& c)
         {
@@ -478,6 +515,9 @@ public:
         }
         draggedIndex = -1;
         draggedKind = DragKind::none;
+        draggingGroup = false;
+        groupPatternSnap.clear();
+        groupAudioSnap.clear();
         paintedCells.clear();
         if (changed)
         {
@@ -554,6 +594,14 @@ public:
     bool changed = false;
     juce::Point<int> lastMousePos;
     std::set<std::pair<int, int>> paintedCells;   // (track, cellStartTick) touched this drag gesture
+
+    // Group move: when the grabbed clip is part of the multi-selection, every
+    // selected clip is shifted by the same tick/track delta as the dragged one.
+    struct ClipSnap { int index; int startTick; int track; };
+    bool draggingGroup = false;
+    int dragAnchorStartTick = 0;
+    int dragAnchorTrack = 0;
+    std::vector<ClipSnap> groupPatternSnap, groupAudioSnap;
 
     // Ctrl+drag rubber-band multi-select (tool-independent, like right-click).
     // Ctrl+click toggles a single clip; Ctrl+drag on empty space box-selects.
@@ -677,12 +725,49 @@ private:
         else
         {
             resizing = onEdge;
+            draggingGroup = false;
+            groupPatternSnap.clear();
+            groupAudioSnap.clear();
+
+            const bool inSelection = (draggedKind == DragKind::pattern && selectedClips.count (draggedIndex) > 0)
+                                  || (draggedKind == DragKind::audio && selectedAudioClips.count (draggedIndex) > 0);
+
             if (draggedKind == DragKind::pattern)
-                dragOffsetTicks = (int) plXToTick (e.getPosition().x)
-                                  - project.clips[(size_t) draggedIndex].startTick;
+            {
+                auto& c = project.clips[(size_t) draggedIndex];
+                dragOffsetTicks = (int) plXToTick (e.getPosition().x) - c.startTick;
+                dragAnchorStartTick = c.startTick;
+                dragAnchorTrack = c.track;
+            }
             else if (draggedKind == DragKind::audio)
-                dragOffsetTicks = (int) plXToTick (e.getPosition().x)
-                                  - project.audioClips[(size_t) draggedIndex].startTick;
+            {
+                auto& c = project.audioClips[(size_t) draggedIndex];
+                dragOffsetTicks = (int) plXToTick (e.getPosition().x) - c.startTick;
+                dragAnchorStartTick = c.startTick;
+                dragAnchorTrack = c.track;
+            }
+
+            // If the grabbed clip belongs to the current selection, move the
+            // whole group; otherwise this click starts a fresh single-clip drag.
+            if (! resizing && inSelection
+                && (selectedClips.size() + selectedAudioClips.size()) > 1)
+            {
+                draggingGroup = true;
+                for (int i : selectedClips)
+                    if (i >= 0 && i < (int) project.clips.size())
+                        groupPatternSnap.push_back ({ i, project.clips[(size_t) i].startTick,
+                                                         project.clips[(size_t) i].track });
+                for (int i : selectedAudioClips)
+                    if (i >= 0 && i < (int) project.audioClips.size())
+                        groupAudioSnap.push_back ({ i, project.audioClips[(size_t) i].startTick,
+                                                       project.audioClips[(size_t) i].track });
+            }
+            else if (! resizing)
+            {
+                // grabbing a clip outside the selection clears it
+                selectedClips.clear();
+                selectedAudioClips.clear();
+            }
         }
     }
 
@@ -875,6 +960,7 @@ private:
                 if (clipIndex >= 0 && clipIndex < (int) owner.context.project.audioClips.size())
                 {
                     owner.context.project.audioClips[(size_t) clipIndex].mixerTrack = i;
+                    propagateAudioClipSettings (clipIndex);
                     owner.context.contentChanged();
                     repaint();
                 }
@@ -882,6 +968,18 @@ private:
         }
         m.addSubMenu ("Route to mixer track", route);
         m.addItem ("Clip volume...", [this, clipIndex] { editAudioClipGain (clipIndex); });
+        m.addSeparator();
+
+        const bool unique = owner.context.project.audioClips[(size_t) clipIndex].uniqueSettings;
+        m.addItem ("Make unique", ! unique, unique, [this, clipIndex]
+        {
+            if (clipIndex >= 0 && clipIndex < (int) owner.context.project.audioClips.size())
+            {
+                owner.context.project.audioClips[(size_t) clipIndex].uniqueSettings = true;
+                owner.context.contentChanged();
+                repaint();
+            }
+        });
         m.addSeparator();
         m.addItem (owner.context.project.audioClips[(size_t) clipIndex].muted ? "Unmute" : "Mute",
                   [this, clipIndex]
@@ -917,7 +1015,25 @@ private:
         bool onEdge = false;
         const int audioIndex = audioClipIndexAt (e.getPosition(), onEdge);
         if (audioIndex >= 0)
-            editAudioClipGain (audioIndex);
+            showAudioClipMenu (audioIndex);
+    }
+
+    // FL-style: non-unique clips of the same source file share gain/routing.
+    // Push the just-edited clip's settings out to its non-unique siblings.
+    void propagateAudioClipSettings (int clipIndex)
+    {
+        auto& clips = owner.context.project.audioClips;
+        if (clipIndex < 0 || clipIndex >= (int) clips.size())
+            return;
+        const auto& src = clips[(size_t) clipIndex];
+        if (src.uniqueSettings)
+            return;
+        for (auto& c : clips)
+            if (! c.uniqueSettings && c.filePath == src.filePath)
+            {
+                c.gain       = src.gain;
+                c.mixerTrack = src.mixerTrack;
+            }
     }
 
     void editAudioClipGain (int clipIndex)
@@ -933,6 +1049,9 @@ private:
         gainSlider->setRange (0.0, 2.0, 0.01);
         gainSlider->setTextValueSuffix (" x");
         gainSlider->setValue (clip->gain, juce::dontSendNotification);
+        // AlertWindow lays custom components out at their current size; a fresh
+        // slider is 0x0 and would be invisible without an explicit size.
+        gainSlider->setSize (320, 26);
         editor->addCustomComponent (gainSlider);
         editor->addButton ("OK", 1, juce::KeyPress (juce::KeyPress::returnKey));
         editor->addButton ("Cancel", 0, juce::KeyPress (juce::KeyPress::escapeKey));
@@ -941,9 +1060,11 @@ private:
             if (result == 1 && clipIndex >= 0 && clipIndex < (int) owner.context.project.audioClips.size())
             {
                 owner.context.project.audioClips[(size_t) clipIndex].gain = (float) gainSlider->getValue();
+                propagateAudioClipSettings (clipIndex);
                 owner.context.contentChanged();
                 repaint();
             }
+            delete gainSlider;
             delete editor;
         }), false);
     }

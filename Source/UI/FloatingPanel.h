@@ -38,6 +38,7 @@ private:
     juce::TextButton closeButton { "x" };
     juce::Rectangle<int> restoredBounds;
     bool maximized = false;
+    bool draggingTitle = false;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (FloatingPanel)
 };

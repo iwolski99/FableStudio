@@ -1,4 +1,5 @@
 #include "MixerPanel.h"
+#include "RightClickWidgets.h"
 
 namespace fable
 {
@@ -157,7 +158,21 @@ public:
             };
             addAndMakeVisible (row.enableButton);
 
-            row.nameButton.onClick = [this, i] { slotMenu (i); };
+            // Left-click: filled plugin slot opens its editor; filled built-in
+            // slot just selects it (shows its param knobs); empty slot opens the
+            // effect picker. Right-click always opens the full slot menu.
+            row.nameButton.onClick = [this, i]
+            {
+                selectedSlot = i;
+                auto& slot = trackModel().slots[(size_t) i];
+                if (slot.type == EffectType::none)
+                    slotMenu (i);
+                else if (slot.type == EffectType::plugin)
+                    openEditorForSlot (i);
+                else
+                    refresh();
+            };
+            row.nameButton.onRightClick = [this, i] { slotMenu (i); };
             addAndMakeVisible (row.nameButton);
         }
 
@@ -231,6 +246,14 @@ public:
                 paramNames.add (fx->getParamName (k));
     }
 
+    void openEditorForSlot (int slotIndex)
+    {
+        if (auto bus = context.engine.getMixerBus (context.selectedMixerTrack))
+            if (auto* instance = bus->getSlot (slotIndex).plugin.get())
+                if (context.openPluginEditor)
+                    context.openPluginEditor (instance, instance->getName());
+    }
+
     void slotMenu (int slotIndex)
     {
         selectedSlot = slotIndex;
@@ -259,6 +282,8 @@ public:
                     slot.type = EffectType::plugin;
                     slot.pluginIdentifier = desc.createIdentifierString();
                     context.structureChanged();
+                    // Effect instance is built synchronously; pop its editor open.
+                    openEditorForSlot (slotIndex);
                 });
         }
 
@@ -332,7 +357,7 @@ public:
     struct SlotRow
     {
         juce::TextButton enableButton { "" };
-        juce::TextButton nameButton;
+        RightClickButton nameButton;
     };
 
     AppContext& context;

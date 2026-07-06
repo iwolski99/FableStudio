@@ -56,10 +56,10 @@ MainComponent::MainComponent()
         addAndMakeVisible (*entry.first);
     }
 
-    // start the engine with the demo project so first launch makes sound
-    context.project = createDefaultProject();
+    // start with an empty project (instruments ready, nothing programmed)
+    context.project = createEmptyProject();
     context.selectedChannelId = context.project.channels.empty() ? -1
-                                    : context.project.channels.back().id;
+                                    : context.project.channels.front().id;
 
     const auto deviceError = context.engine.initialiseDevice();
     context.engine.setBpm (context.project.bpm);
@@ -229,7 +229,7 @@ void MainComponent::menuItemSelected (int menuItemID, int)
 void MainComponent::newProject()
 {
     context.engine.stop();
-    context.project = createDefaultProject();
+    context.project = createEmptyProject();
     context.currentFile = juce::File();
     context.selectedPatternIndex = 0;
     context.selectedChannelId = context.project.channels.empty() ? -1

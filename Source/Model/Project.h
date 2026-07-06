@@ -118,6 +118,9 @@ struct AudioClip
     int lengthTicks = kTicksPerBar;
     int sourceOffsetTicks = 0;   // ticks into the source file where playback begins (slicing)
     bool muted      = false;
+    // FL-style: clips of the same source file share gain/routing. Marking a
+    // clip unique detaches it so edits no longer propagate to/from its siblings.
+    bool uniqueSettings = false;
 
     int endTick() const { return startTick + lengthTicks; }
 };
@@ -175,5 +178,9 @@ struct Project
 // Creates the default startup project: synthesized drum kit + synth channel,
 // a demo beat in pattern 1 and a short arrangement.
 Project createDefaultProject();
+
+// Creates a blank project: a drum kit + synth ready in the Channel Rack, one
+// empty Pattern 1, and an empty arrangement (no steps, notes, clips or effects).
+Project createEmptyProject();
 
 } // namespace fable

@@ -62,13 +62,20 @@ void FloatingPanel::resized()
 void FloatingPanel::mouseDown (const juce::MouseEvent& e)
 {
     toFront (true);
-    if (e.getPosition().y < kTitleHeight)
+
+    // Latch whether the drag started on the title bar. We must NOT re-test the
+    // mouse-down Y on every drag event: getMouseDownPosition() is relative to
+    // the panel's *current* position, so as the panel moves up while dragging,
+    // that Y drifts past kTitleHeight and the drag would cut out - which is
+    // exactly why dragging a panel upward used to stop after a few pixels.
+    draggingTitle = e.getPosition().y < kTitleHeight;
+    if (draggingTitle)
         dragger.startDraggingComponent (this, e);
 }
 
 void FloatingPanel::mouseDrag (const juce::MouseEvent& e)
 {
-    if (e.getMouseDownPosition().y < kTitleHeight)
+    if (draggingTitle)
         dragger.dragComponent (this, e, &constrainer);
 }
 
