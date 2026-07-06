@@ -25,6 +25,20 @@ namespace colours
     const juce::Colour stepOffBeat { 0xffe0a23f };
 }
 
+// Grabs keyboard focus on mouse hover, but only if our own top-level window is
+// already the OS-focused one. A plain grabKeyboardFocus() on every mouseEnter
+// activates our window unconditionally - if a plugin editor (a separate
+// top-level window) currently has focus, that activation raises the main
+// window above it, which looks like the editor "hides" whenever the mouse
+// wanders back over the piano roll/playlist.
+inline void grabKeyboardFocusIfWindowActive (juce::Component& c)
+{
+    if (auto* peer = c.getPeer())
+        if (! peer->isFocused())
+            return;
+    c.grabKeyboardFocus();
+}
+
 class FableLookAndFeel : public juce::LookAndFeel_V4
 {
 public:

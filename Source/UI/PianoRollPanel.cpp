@@ -57,10 +57,11 @@ public:
         g.fillAll (colours::panelDark);
         const int lengthTicks = gridLengthTicks();
 
-        // row shading + horizontal lines. FL-style: the keybed alternates
-        // light/dark, and when a scale is set the OUT-of-scale rows are dimmed
-        // (rather than faintly tinting the in-scale ones) so in-key rows clearly
-        // stand out; the root note's row gets an accent tint.
+        // row shading + horizontal lines. FL-style scale highlighting: leave
+        // out-of-key rows at the plain keybed shading and light up ONLY the
+        // rows that are in the selected key, with the root note lit brighter
+        // still - dimming out-of-key rows (the old approach) just reads as
+        // "everything got a bit darker", not a clear in/out distinction.
         const bool scaleOn = owner.isScaleActive();
         for (int pitch = kLowNote; pitch <= kHighNote; ++pitch)
         {
@@ -72,14 +73,9 @@ public:
                                : colours::panelDark.brighter (0.10f));
             g.fillRect (kKeyWidth, y, getWidth() - kKeyWidth, kNoteHeight);
 
-            if (scaleOn && ! owner.isPitchInHighlightedScale (pitch))
+            if (scaleOn && owner.isPitchInHighlightedScale (pitch))
             {
-                g.setColour (juce::Colours::black.withAlpha (0.34f));   // dim out-of-key rows
-                g.fillRect (kKeyWidth, y, getWidth() - kKeyWidth, kNoteHeight);
-            }
-            if (owner.isRootPitch (pitch))
-            {
-                g.setColour (colours::accent.withAlpha (0.16f));         // mark the key's root
+                g.setColour (colours::accent.withAlpha (owner.isRootPitch (pitch) ? 0.45f : 0.20f));
                 g.fillRect (kKeyWidth, y, getWidth() - kKeyWidth, kNoteHeight);
             }
             if (semitone == 0)
@@ -211,6 +207,12 @@ public:
             g.setColour (black ? juce::Colour (0xff202225) : juce::Colour (0xffb9bec3));
             g.fillRect (x0, y, kKeyWidth - 4, kNoteHeight - 1);
 
+            if (owner.isScaleActive() && owner.isPitchInHighlightedScale (pitch))
+            {
+                g.setColour (colours::accent.withAlpha (owner.isRootPitch (pitch) ? 0.9f : 0.55f));
+                g.fillRect (x0 + kKeyWidth - 8, y, 4, kNoteHeight - 1);
+            }
+
             if (semitone == 0)
             {
                 g.setColour (black ? colours::text : juce::Colour (0xff33373b));
@@ -258,7 +260,7 @@ public:
         // "the note under the cursor" work without first having to click - a
         // click on empty space would otherwise create a note as a side effect.
         lastMousePos = e.getPosition();
-        grabKeyboardFocus();
+        grabKeyboardFocusIfWindowActive (*this);
     }
 
     void mouseDown (const juce::MouseEvent& e) override

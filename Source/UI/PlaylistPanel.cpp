@@ -328,7 +328,7 @@ public:
         // tool-switch numbers, Home/End) work without needing a click first -
         // a click would otherwise paint/slice/mute depending on the active tool.
         lastMousePos = e.getPosition();
-        grabKeyboardFocus();
+        grabKeyboardFocusIfWindowActive (*this);
     }
 
     void mouseDown (const juce::MouseEvent& e) override

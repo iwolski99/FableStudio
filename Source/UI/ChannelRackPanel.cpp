@@ -541,11 +541,22 @@ ChannelRackPanel::~ChannelRackPanel()
     context.contentBroadcaster.removeChangeListener (this);
 }
 
-void ChannelRackPanel::changeListenerCallback (juce::ChangeBroadcaster*)
+void ChannelRackPanel::changeListenerCallback (juce::ChangeBroadcaster* source)
 {
-    header->refresh();
-    rebuildRows();
+    // contentBroadcaster fires on every single step toggled while painting/
+    // erasing a drag across the grid. Rebuilding the rows on that would delete
+    // and recreate the very ChannelRow that's holding the mouse capture for
+    // the drag, which stops it dead after the first step. Only rebuild (which
+    // also re-lays-out row widths for a new pattern length) on structural
+    // changes; a content-only change just needs a repaint since rows read
+    // step/pattern data live in paint().
+    if (source == &context.structureBroadcaster)
+    {
+        header->refresh();
+        rebuildRows();
+    }
     repaint();
+    rowHolder.repaint();
 }
 
 void ChannelRackPanel::timerCallback()
