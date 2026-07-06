@@ -38,6 +38,8 @@ struct AppContext
     // Set by MainComponent
     std::function<void (juce::AudioPluginInstance*, const juce::String& title)> openPluginEditor;
     std::function<void()> showPianoRoll;
+    std::function<void()> showChannelRack;
+    std::function<void (int channelId)> openInstrumentEditor;   // native synth/kick editor windows
     std::function<void (const juce::String&)> showStatusMessage;
 
     Pattern* selectedPattern()
@@ -70,6 +72,8 @@ struct AppContext
     // continuous controls: knobs/faders (cheap, no broadcast)
     void channelParamsChanged() { dirty = true; engine.updateChannelParams (project); }
     void mixerParamsChanged()   { dirty = true; engine.updateMixerParams (project); }
+    // native synth/kick knob edits (cheap, pushes atomics; no node rebuild)
+    void instrumentParamsChanged() { dirty = true; engine.updateInstrumentParams (project); }
 
     void selectChannel (int channelId)
     {

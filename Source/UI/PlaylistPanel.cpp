@@ -90,6 +90,13 @@ public:
         return id > 0 ? id : kTicksPerBar;
     }
 
+    // Snap resolution for the current gesture: holding Alt bypasses the grid
+    // (1 tick = effectively free) so clips can be nudged into precise alignment.
+    int snapTicks (const juce::MouseEvent& e) const
+    {
+        return e.mods.isAltDown() ? 1 : snapTicks();
+    }
+
     int contentLengthTicks()
     {
         return juce::jmax (owner.context.project.songLengthTicks() + 8 * kTicksPerBar,
@@ -436,7 +443,7 @@ public:
         if (owner.currentTool != PlaylistPanel::Tool::draw || draggedIndex < 0)
             return;
 
-        const int snap = snapTicks();
+        const int snap = snapTicks (e);
         auto& project = owner.context.project;
 
         // Group move: shift every selected clip by the same delta as the anchor.
@@ -712,7 +719,7 @@ private:
             c.patternIndex = owner.context.selectedPatternIndex;
             c.track        = juce::jlimit (0, kNumPlaylistTracks - 1,
                                            (e.getPosition().y - kRulerHeight) / kTrackHeight);
-            c.startTick    = ((int) plXToTick (e.getPosition().x) / snapTicks()) * snapTicks();
+            c.startTick    = ((int) plXToTick (e.getPosition().x) / snapTicks (e)) * snapTicks (e);
             c.lengthTicks  = pattern->lengthTicks();
             project.clips.push_back (c);
             draggedIndex = (int) project.clips.size() - 1;
@@ -1015,7 +1022,23 @@ private:
         bool onEdge = false;
         const int audioIndex = audioClipIndexAt (e.getPosition(), onEdge);
         if (audioIndex >= 0)
+        {
             showAudioClipMenu (audioIndex);
+            return;
+        }
+
+        // Double-clicking a pattern clip opens that pattern for editing: select
+        // it and bring the Channel Rack to the front (FL: double-click a clip
+        // jumps you into editing its pattern).
+        const int clipIndex = clipIndexAt (e.getPosition(), onEdge);
+        if (clipIndex >= 0 && clipIndex < (int) owner.context.project.clips.size())
+        {
+            const int pi = owner.context.project.clips[(size_t) clipIndex].patternIndex;
+            if (pi >= 0 && pi < (int) owner.context.project.patterns.size())
+                owner.context.selectPattern (pi);
+            if (owner.context.showChannelRack)
+                owner.context.showChannelRack();
+        }
     }
 
     // FL-style: non-unique clips of the same source file share gain/routing.
@@ -1093,10 +1116,17 @@ PlaylistPanel::PlaylistPanel (AppContext& ctx) : context (ctx)
     };
     addAndMakeVisible (addPatternButton);
 
-    snapBox.addItem ("Snap: bar",  kTicksPerBar);
-    snapBox.addItem ("Snap: beat", kPPQ);
-    snapBox.addItem ("Snap: 1/2 bar", kTicksPerBar / 2);
+    // Full snap range from a whole bar down to a single step, plus a free
+    // "off" mode. Hold Alt while dragging to bypass snapping momentarily for
+    // pixel-perfect alignment regardless of the selected mode.
+    snapBox.addItem ("Snap: bar",      kTicksPerBar);
+    snapBox.addItem ("Snap: 1/2 bar",  kTicksPerBar / 2);
+    snapBox.addItem ("Snap: beat",     kPPQ);
+    snapBox.addItem ("Snap: 1/2 beat", kPPQ / 2);
+    snapBox.addItem ("Snap: step",     kTicksPerStep);
+    snapBox.addItem ("Snap: off (Alt)", 1);
     snapBox.setSelectedId (kTicksPerBar, juce::dontSendNotification);
+    snapBox.setTooltip ("Grid snap for moving/resizing clips - hold Alt while dragging to snap freely");
     addAndMakeVisible (snapBox);
 
     drawToolButton.setTooltip ("Draw (1): paint/move/resize clips");

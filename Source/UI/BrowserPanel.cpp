@@ -55,9 +55,6 @@ BrowserPanel::BrowserPanel (AppContext& ctx) : context (ctx)
     fileTree->setDragAndDropDescription ("audiofile");
     addAndMakeVisible (*fileTree);
 
-    previewPlayer.setSource (&previewTransport);
-    context.engine.getDeviceManager().addAudioCallback (&previewPlayer);
-
     context.structureBroadcaster.addChangeListener (this);
     refreshPlugins();
     setOpaque (true);
@@ -65,8 +62,7 @@ BrowserPanel::BrowserPanel (AppContext& ctx) : context (ctx)
 
 BrowserPanel::~BrowserPanel()
 {
-    context.engine.getDeviceManager().removeAudioCallback (&previewPlayer);
-    previewPlayer.setSource (nullptr);
+    context.engine.stopPreviewSample();
     context.structureBroadcaster.removeChangeListener (this);
     fileTree->removeListener (this);
 }
@@ -162,10 +158,9 @@ void BrowserPanel::changeListenerCallback (juce::ChangeBroadcaster*)
 
 void BrowserPanel::stopPreview()
 {
-    previewTransport.stop();
-    previewTransport.setSource (nullptr);
-    previewReaderSource.reset();
+    context.engine.stopPreviewSample();
     previewFilePath.clear();
+    previewEndMs = 0;
 }
 
 void BrowserPanel::fileClicked (const juce::File& file, const juce::MouseEvent& e)
@@ -174,20 +169,27 @@ void BrowserPanel::fileClicked (const juce::File& file, const juce::MouseEvent& 
         return;
 
     // Clicking the sound that's already previewing stops it (click again to
-    // cancel a long sample instead of waiting for it to finish).
-    const bool sameAsPlaying = previewTransport.isPlaying()
-                            && previewFilePath == file.getFullPathName();
+    // cancel a long sample instead of waiting for it to finish). We consider it
+    // "still playing" only until its known duration elapses, so clicking a
+    // finished short sample replays it rather than being a no-op.
+    const bool sameAsPlaying = previewFilePath == file.getFullPathName()
+                            && juce::Time::getMillisecondCounter() < previewEndMs;
     stopPreview();
     if (sameAsPlaying)
         return;
 
-    if (auto* reader = context.engine.getFormatManager().createReaderFor (file))
-    {
-        previewReaderSource = std::make_unique<juce::AudioFormatReaderSource> (reader, true);
-        previewTransport.setSource (previewReaderSource.get(), 0, nullptr, reader->sampleRate);
-        previewFilePath = file.getFullPathName();
-        previewTransport.start();
-    }
+    // Header-only read to size the preview timeout; the engine loads its own
+    // copy for playback.
+    double lengthSeconds = 0.0;
+    if (std::unique_ptr<juce::AudioFormatReader> reader {
+            context.engine.getFormatManager().createReaderFor (file) })
+        if (reader->sampleRate > 0.0)
+            lengthSeconds = (double) reader->lengthInSamples / reader->sampleRate;
+
+    context.engine.previewSampleFile (file);
+    previewFilePath = file.getFullPathName();
+    previewEndMs = juce::Time::getMillisecondCounter()
+                 + (juce::uint32) (lengthSeconds * 1000.0) + 100;
 }
 
 int BrowserPanel::getNumRows()

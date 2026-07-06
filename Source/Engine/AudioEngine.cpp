@@ -193,10 +193,22 @@ static juce::String generatorSourceFor (const Channel& channel)
     switch (channel.type)
     {
         case GeneratorType::synth:   return "synth";
+        case GeneratorType::kick:    return "kick";
         case GeneratorType::sampler: return "sampler:" + channel.samplePath;
         case GeneratorType::plugin:  return "plugin:" + channel.pluginIdentifier;
     }
     return {};
+}
+
+// Builds a realtime param bank for a native instrument channel from the model's
+// param map, filling in any missing keys with the spec defaults.
+static std::shared_ptr<AtomicParams> makeInstrumentParams (const Channel& channel)
+{
+    const auto specs = channel.type == GeneratorType::kick ? kickSpecs() : fableSynthSpecs();
+    auto params = std::make_shared<AtomicParams>();
+    params->configure (specs);
+    params->setFrom (specs, channel.synthParams);
+    return params;
 }
 
 juce::String AudioEngine::buildChannelGenerator (ChannelNode& node, Channel& channel)
@@ -206,7 +218,11 @@ juce::String AudioEngine::buildChannelGenerator (ChannelNode& node, Channel& cha
     switch (channel.type)
     {
         case GeneratorType::synth:
-            node.setSynthGenerator();
+            node.setSynthGenerator (makeInstrumentParams (channel));
+            return {};
+
+        case GeneratorType::kick:
+            node.setKickGenerator (makeInstrumentParams (channel));
             return {};
 
         case GeneratorType::sampler:
@@ -356,6 +372,24 @@ void AudioEngine::updateMixerParams (const Project& project)
     auto set = copyRenderSet();
     for (int i = 0; i < juce::jmin ((int) set->buses.size(), kNumMixerTracks); ++i)
         set->buses[(size_t) i]->updateFromModel (project.mixerTracks[(size_t) i]);
+}
+
+void AudioEngine::updateInstrumentParams (const Project& project)
+{
+    // Push edited native-instrument (synth/kick) params into the live nodes'
+    // atomic banks - no node rebuild, so knob-turns are heard immediately.
+    auto set = copyRenderSet();
+    for (auto& node : set->channels)
+    {
+        auto bank = node->getInstrumentParams();
+        if (bank == nullptr)
+            continue;
+        auto* c = project.channelById (node->channelId);
+        if (c == nullptr)
+            continue;
+        const auto specs = c->type == GeneratorType::kick ? kickSpecs() : fableSynthSpecs();
+        bank->setFrom (specs, c->synthParams);
+    }
 }
 
 void AudioEngine::updatePlayback (const Project& project)

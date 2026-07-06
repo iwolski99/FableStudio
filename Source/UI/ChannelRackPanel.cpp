@@ -94,6 +94,12 @@ public:
                 openPluginEditor();
                 return;
             }
+            if (c != nullptr && (c->type == GeneratorType::synth || c->type == GeneratorType::kick))
+            {
+                if (context.openInstrumentEditor)
+                    context.openInstrumentEditor (channelId);
+                return;
+            }
             // audition on select, like clicking a channel button
             context.engine.auditionNoteOn (channelId, rootNoteOf(), 0.8f);
             juce::Timer::callAfterDelay (220, [ctx = &context, id = channelId, pitch = rootNoteOf()]
@@ -615,12 +621,23 @@ void ChannelRackPanel::addChannelMenu()
     m.addSectionHeader ("Built-in");
     m.addItem ("FableSynth", [this]
     {
-        context.project.addChannel (GeneratorType::synth, "FableSynth");
+        const int id = context.project.addChannel (GeneratorType::synth, "FableSynth");
+        context.selectedChannelId = id;
         context.structureChanged();
+        if (context.openInstrumentEditor)
+            context.openInstrumentEditor (id);
+    });
+    m.addItem ("Kick (designer)", [this]
+    {
+        const int id = context.project.addChannel (GeneratorType::kick, "Kick");
+        context.selectedChannelId = id;
+        context.structureChanged();
+        if (context.openInstrumentEditor)
+            context.openInstrumentEditor (id);
     });
 
     juce::PopupMenu kits;
-    for (auto* name : { "kick", "clap", "hat", "openhat", "snare" })
+    for (auto* name : { "clap", "hat", "openhat", "snare" })
     {
         kits.addItem (juce::String (name), [this, name = juce::String (name)]
         {

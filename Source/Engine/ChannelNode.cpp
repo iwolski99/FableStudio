@@ -8,12 +8,27 @@ ChannelNode::~ChannelNode()
     release();
 }
 
-void ChannelNode::setSynthGenerator()
+void ChannelNode::setSynthGenerator (std::shared_ptr<AtomicParams> params)
 {
+    instrumentParams = std::move (params);
     auto s = std::make_unique<juce::Synthesiser>();
     for (int i = 0; i < 12; ++i)
-        s->addVoice (new FableSynthVoice());
+        s->addVoice (new FableSynthVoice (instrumentParams));
     s->addSound (new FableSynthSound());
+    plugin.reset();
+    synth = std::move (s);
+    if (prepared)
+        synth->setCurrentPlaybackSampleRate (preparedRate);
+}
+
+void ChannelNode::setKickGenerator (std::shared_ptr<AtomicParams> params)
+{
+    instrumentParams = std::move (params);
+    auto s = std::make_unique<juce::Synthesiser>();
+    s->setNoteStealingEnabled (true);
+    for (int i = 0; i < 4; ++i)
+        s->addVoice (new KickVoice (instrumentParams));
+    s->addSound (new KickSound());
     plugin.reset();
     synth = std::move (s);
     if (prepared)

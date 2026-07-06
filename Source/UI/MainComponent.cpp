@@ -26,6 +26,11 @@ MainComponent::MainComponent()
     {
         pianoRollPanel.toFrontAndShow();
     };
+    context.showChannelRack = [this]
+    {
+        channelRackPanel.toFrontAndShow();
+    };
+    context.openInstrumentEditor = [this] (int channelId) { openInstrumentEditor (channelId); };
     context.showStatusMessage = [this] (const juce::String& message) { showStatus (message); };
     context.plugins.onListChanged = [this]
     {
@@ -75,6 +80,7 @@ MainComponent::MainComponent()
 
 MainComponent::~MainComponent()
 {
+    instrumentWindows.clear();
     pluginWindows.clear();
     context.engine.shutdownDevice();
     juce::LookAndFeel::setDefaultLookAndFeel (nullptr);
@@ -431,6 +437,35 @@ void MainComponent::openPluginEditor (juce::AudioPluginInstance* instance, const
             pluginWindows.erase (std::remove_if (pluginWindows.begin(), pluginWindows.end(),
                                                  [w] (auto& p) { return p.get() == w; }),
                                  pluginWindows.end());
+        }));
+}
+
+void MainComponent::openInstrumentEditor (int channelId)
+{
+    auto* channel = context.project.channelById (channelId);
+    if (channel == nullptr
+        || (channel->type != GeneratorType::synth && channel->type != GeneratorType::kick))
+        return;
+
+    // Already open? Bring it forward instead of spawning a duplicate.
+    for (auto& w : instrumentWindows)
+        if (w->getChannelId() == channelId)
+        {
+            w->toFront (true);
+            return;
+        }
+
+    const bool isKick = channel->type == GeneratorType::kick;
+    auto specs = isKick ? kickSpecs() : fableSynthSpecs();
+    const juce::String subdir = isKick ? "Kick" : "FableSynth";
+
+    instrumentWindows.push_back (std::make_unique<InstrumentEditorWindow> (
+        context, channelId, channel->name, std::move (specs), subdir,
+        [this] (InstrumentEditorWindow* w)
+        {
+            instrumentWindows.erase (std::remove_if (instrumentWindows.begin(), instrumentWindows.end(),
+                                                     [w] (auto& p) { return p.get() == w; }),
+                                     instrumentWindows.end());
         }));
 }
 

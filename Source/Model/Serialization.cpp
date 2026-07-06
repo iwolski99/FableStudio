@@ -69,6 +69,13 @@ juce::var projectToVar (const Project& p)
         o->setProperty ("sampleFadeInMs", c.sampleFadeInMs);
         o->setProperty ("sampleFadeOutMs", c.sampleFadeOutMs);
         o->setProperty ("colour", c.colour.toString());
+        if (! c.synthParams.empty())
+        {
+            auto sp = obj();
+            for (auto& [key, value] : c.synthParams)
+                sp->setProperty (key, value);
+            o->setProperty ("synthParams", sp.get());
+        }
         channels.add (o.get());
     }
     root->setProperty ("channels", channels);
@@ -197,7 +204,7 @@ bool projectFromVar (const juce::var& v, Project& out)
             Channel c;
             c.id   = (int) cv["id"];
             c.name = cv["name"].toString();
-            c.type = (GeneratorType) juce::jlimit (0, 2, (int) cv["type"]);
+            c.type = (GeneratorType) juce::jlimit (0, 3, (int) cv["type"]);
             c.samplePath       = cv["sample"].toString();
             c.pluginIdentifier = cv["plugin"].toString();
             c.pluginState      = base64ToBlock (cv["pluginState"].toString());
@@ -209,6 +216,9 @@ bool projectFromVar (const juce::var& v, Project& out)
             c.sampleFadeInMs  = juce::jlimit (0.0f, 5000.0f, (float) (double) cv["sampleFadeInMs"]);
             c.sampleFadeOutMs = juce::jlimit (0.0f, 5000.0f, (float) (double) cv["sampleFadeOutMs"]);
             c.colour     = juce::Colour::fromString (cv["colour"].toString());
+            if (auto* sp = cv["synthParams"].getDynamicObject())
+                for (auto& prop : sp->getProperties())
+                    c.synthParams[prop.name.toString()] = (float) (double) prop.value;
             p.nextChannelId = juce::jmax (p.nextChannelId, c.id + 1);
             p.channels.push_back (std::move (c));
         }

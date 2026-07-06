@@ -75,7 +75,9 @@ struct Pattern
     }
 };
 
-enum class GeneratorType { sampler, synth, plugin };
+// sampler / synth (FableSynth) / plugin (hosted VST3) / kick (Kick designer).
+// synth and kick are native instruments whose parameters live in synthParams.
+enum class GeneratorType { sampler, synth, plugin, kick };
 
 struct Channel
 {
@@ -85,6 +87,10 @@ struct Channel
     juce::String     samplePath;        // sampler: file path ("builtin:kick" etc. for synthesized kits)
     juce::String     pluginIdentifier;  // plugin: KnownPluginList identifier string
     juce::MemoryBlock pluginState;      // plugin: saved state blob
+    // Native-instrument parameters (FableSynth, Kick designer). Named 0..1-ish
+    // floats; the engine maps them onto its DSP and the editor drives them.
+    // Serialized generically so presets and projects round-trip.
+    std::map<juce::String, float> synthParams;
     float            volume = 0.78f;    // 0..1 linear gain
     float            pan    = 0.0f;     // -1..1
     bool             muted  = false;

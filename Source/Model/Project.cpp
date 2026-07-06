@@ -94,13 +94,12 @@ Project createDefaultProject()
     Project p;
     p.bpm = 140.0;
 
-    const int kickId  = p.addChannel (GeneratorType::sampler, "Kick");
+    const int kickId  = p.addChannel (GeneratorType::kick,    "Kick");
     const int clapId  = p.addChannel (GeneratorType::sampler, "Clap");
     const int hatId   = p.addChannel (GeneratorType::sampler, "Hat");
     const int snareId = p.addChannel (GeneratorType::sampler, "Snare");
     const int synthId = p.addChannel (GeneratorType::synth,   "FableSynth");
 
-    p.channelById (kickId)->samplePath  = "builtin:kick";
     p.channelById (clapId)->samplePath  = "builtin:clap";
     p.channelById (hatId)->samplePath   = "builtin:hat";
     p.channelById (snareId)->samplePath = "builtin:snare";
@@ -144,13 +143,12 @@ Project createEmptyProject()
     p.bpm = 140.0;
 
     // Instruments ready to use, but nothing programmed.
-    const int kickId  = p.addChannel (GeneratorType::sampler, "Kick");
+    const int kickId  = p.addChannel (GeneratorType::kick,    "Kick");
     const int clapId  = p.addChannel (GeneratorType::sampler, "Clap");
     const int hatId   = p.addChannel (GeneratorType::sampler, "Hat");
     const int snareId = p.addChannel (GeneratorType::sampler, "Snare");
     const int synthId = p.addChannel (GeneratorType::synth,   "FableSynth");
 
-    p.channelById (kickId)->samplePath  = "builtin:kick";
     p.channelById (clapId)->samplePath  = "builtin:clap";
     p.channelById (hatId)->samplePath   = "builtin:hat";
     p.channelById (snareId)->samplePath = "builtin:snare";

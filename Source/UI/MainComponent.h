@@ -11,6 +11,7 @@
 #include "PianoRollPanel.h"
 #include "PlaylistPanel.h"
 #include "PluginWindow.h"
+#include "InstrumentEditor.h"
 #include "TransportBar.h"
 
 namespace fable
@@ -48,6 +49,7 @@ private:
     void exportWav();
     void loadProjectFromFileAndSync (const juce::File& file);
     void openPluginEditor (juce::AudioPluginInstance* instance, const juce::String& title);
+    void openInstrumentEditor (int channelId);
     void showStatus (const juce::String& message);
     void updateWindowTitle();
 
@@ -81,6 +83,7 @@ private:
     juce::TextButton mixerTabButton       { "Mixer" };
 
     std::vector<std::unique_ptr<PluginWindow>> pluginWindows;
+    std::vector<std::unique_ptr<InstrumentEditorWindow>> instrumentWindows;
     std::unique_ptr<juce::FileChooser> chooser;
     ComputerKeyboardPlayer keyboardPlayer { context };
 

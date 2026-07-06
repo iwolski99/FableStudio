@@ -67,12 +67,12 @@ private:
     std::unique_ptr<juce::DirectoryContentsList> dirContents;
     std::unique_ptr<juce::FileTreeComponent> fileTree;
 
-    // Click-to-preview: plays alongside the main engine callback via a second
-    // AudioSourcePlayer registered on the same device manager.
-    juce::AudioTransportSource previewTransport;
-    juce::AudioSourcePlayer previewPlayer;
-    std::unique_ptr<juce::AudioFormatReaderSource> previewReaderSource;
-    juce::String previewFilePath;   // currently-auditioned file (empty = none)
+    // Click-to-preview goes through the engine's lock-free preview node (see
+    // AudioEngine::previewSampleFile) instead of a second AudioSourcePlayer on
+    // the device - one audio callback, and swapping the preview node is
+    // refcount-safe, which fixes the crashes from rapid re-auditioning.
+    juce::String previewFilePath;      // currently-auditioned file (empty = none)
+    juce::uint32 previewEndMs = 0;     // when the current preview is expected to finish
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (BrowserPanel)
 };

@@ -76,6 +76,7 @@ public:
     void updateChannelParams (const Project& project);
     void updateMixerParams   (const Project& project);
     void updatePlayback      (const Project& project);   // recompile note data
+    void updateInstrumentParams (const Project& project);  // native synth/kick param edits
 
     std::shared_ptr<ChannelNode> getChannelNode (int channelId) const;
     std::shared_ptr<MixerBus>    getMixerBus (int index) const;

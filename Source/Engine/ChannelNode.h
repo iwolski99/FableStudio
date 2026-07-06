@@ -3,6 +3,7 @@
 #include <juce_audio_processors/juce_audio_processors.h>
 #include "../Model/Project.h"
 #include "BuiltinSynth.h"
+#include "KickEngine.h"
 #include "SamplerSound.h"
 
 namespace fable
@@ -20,10 +21,15 @@ public:
     ~ChannelNode();
 
     // --- message thread ------------------------------------------------
-    void setSynthGenerator();
+    void setSynthGenerator (std::shared_ptr<AtomicParams> params);
+    void setKickGenerator (std::shared_ptr<AtomicParams> params);
     void setSamplerGenerator (juce::AudioBuffer<float>&& sample, double sourceRate, int rootNote,
                               float fadeInMs, float fadeOutMs);
     void setPluginGenerator (std::unique_ptr<juce::AudioPluginInstance> instance);
+
+    // Shared realtime param bank for native instruments (synth/kick); the
+    // engine writes new values into it live without rebuilding the node.
+    std::shared_ptr<AtomicParams> getInstrumentParams() const { return instrumentParams; }
 
     void prepare (double sampleRate, int maxBlockSize);
     void release();
@@ -62,6 +68,7 @@ private:
 
     std::unique_ptr<juce::Synthesiser> synth;             // builtin synth or sampler
     std::unique_ptr<juce::AudioPluginInstance> plugin;    // hosted instrument
+    std::shared_ptr<AtomicParams> instrumentParams;       // synth/kick live params
 
     juce::AudioBuffer<float> scratch;
     float lastGainL = 0.0f, lastGainR = 0.0f;
