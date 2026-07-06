@@ -67,7 +67,7 @@ public:
     void mouseUp (const juce::MouseEvent& e) override
     {
         if (e.mods.isPopupMenu())
-            owner.renameSelectedPattern();
+            owner.showPatternMenu();
     }
 
 private:
@@ -1174,6 +1174,19 @@ void PlaylistPanel::refreshToolButtons()
     style (paintToolButton, Tool::paint);
     style (sliceToolButton, Tool::slice);
     style (muteToolButton,  Tool::mute);
+}
+
+void PlaylistPanel::showPatternMenu()
+{
+    juce::PopupMenu m;
+    m.addItem ("Rename pattern...", [this] { renameSelectedPattern(); });
+    m.addItem ("Duplicate pattern", [this]
+    {
+        const int newIndex = context.project.duplicatePattern (context.selectedPatternIndex);
+        if (newIndex >= 0)
+            context.selectPattern (newIndex);   // rebuilds header + selects the copy
+    });
+    m.showMenuAsync (juce::PopupMenu::Options().withTargetComponent (patternBox));
 }
 
 void PlaylistPanel::renameSelectedPattern()

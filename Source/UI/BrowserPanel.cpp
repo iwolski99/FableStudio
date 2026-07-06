@@ -160,19 +160,32 @@ void BrowserPanel::changeListenerCallback (juce::ChangeBroadcaster*)
     refreshPlugins();
 }
 
+void BrowserPanel::stopPreview()
+{
+    previewTransport.stop();
+    previewTransport.setSource (nullptr);
+    previewReaderSource.reset();
+    previewFilePath.clear();
+}
+
 void BrowserPanel::fileClicked (const juce::File& file, const juce::MouseEvent& e)
 {
     if (e.mods.isPopupMenu() || ! context.isSupportedAudioFile (file))
         return;
 
-    previewTransport.stop();
-    previewTransport.setSource (nullptr);
-    previewReaderSource.reset();
+    // Clicking the sound that's already previewing stops it (click again to
+    // cancel a long sample instead of waiting for it to finish).
+    const bool sameAsPlaying = previewTransport.isPlaying()
+                            && previewFilePath == file.getFullPathName();
+    stopPreview();
+    if (sameAsPlaying)
+        return;
 
     if (auto* reader = context.engine.getFormatManager().createReaderFor (file))
     {
         previewReaderSource = std::make_unique<juce::AudioFormatReaderSource> (reader, true);
         previewTransport.setSource (previewReaderSource.get(), 0, nullptr, reader->sampleRate);
+        previewFilePath = file.getFullPathName();
         previewTransport.start();
     }
 }

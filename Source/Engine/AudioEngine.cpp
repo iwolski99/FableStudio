@@ -237,6 +237,7 @@ juce::String AudioEngine::buildChannelGenerator (ChannelNode& node, Channel& cha
                 if (channel.pluginState.getSize() > 0)
                     instance->setStateInformation (channel.pluginState.getData(),
                                                    (int) channel.pluginState.getSize());
+                instance->setPlayHead (&playHead);   // host-tempo sync
                 node.setPluginGenerator (std::move (instance));
                 return {};
             }
@@ -271,6 +272,7 @@ juce::String AudioEngine::buildEffectSlot (MixerBus& bus, int slotIndex, EffectS
         if (slot.pluginState.getSize() > 0)
             instance->setStateInformation (slot.pluginState.getData(),
                                            (int) slot.pluginState.getSize());
+        instance->setPlayHead (&playHead);   // host-tempo sync
         bus.setSlotPlugin (slotIndex, std::move (instance));
         return {};
     }
@@ -543,6 +545,11 @@ void AudioEngine::processBlock (juce::AudioBuffer<float>& output)
         mixBpm = t.bpm;
         playheadTicks.store (sequencer.process (*set->playback, t, currentSampleRate, numSamples, sink));
     }
+
+    // Publish tempo/position to hosted plugins before they process this block.
+    playHead.update (bpm.load(), sequencer.getPositionTicks() / (double) kPPQ,
+                     playheadSampleCounter, playing.load());
+    playheadSampleCounter += numSamples;
 
     // channels render into their assigned mixer bus
     for (auto& bus : set->buses)

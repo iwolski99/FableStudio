@@ -30,10 +30,15 @@ public:
             editor = new juce::GenericAudioProcessorEditor (plugin);
 
         setContentOwned (editor, true);
-        setResizable (editor->isResizable(), false);
+        // Don't add user-resizable window borders: the resize-border overlay
+        // reached to the window edges and could trigger a spurious resize/close
+        // when the mouse left the window sideways. Plugin editors resize
+        // themselves and the window follows (setContentOwned resize-to-fit).
+        setResizable (false, false);
         // Keep at least the title bar on-screen so it can always be grabbed.
-        setConstrainer (&constrainer);
         constrainer.setMinimumOnscreenAmounts (26, 48, 26, 48);
+        constrainer.setMinimumSize (120, 60);
+        setConstrainer (&constrainer);
         centreWithSize (juce::jmax (300, editor->getWidth()),
                         juce::jmax (150, editor->getHeight()) + 26);
         setVisible (true);

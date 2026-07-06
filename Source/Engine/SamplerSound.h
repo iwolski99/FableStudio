@@ -75,7 +75,9 @@ public:
             return;
 
         const auto& data = sound->data;
-        const float* src = data.getReadPointer (0);
+        const int   dataCh = data.getNumChannels();
+        const float* srcL = data.getReadPointer (0);
+        const float* srcR = data.getReadPointer (dataCh > 1 ? 1 : 0);   // mono: reuse L
         const int    len = data.getNumSamples();
         const float  releaseStep = 1.0f / (0.005f * (float) getSampleRate());  // 5 ms fade
 
@@ -105,10 +107,17 @@ public:
                     envelope = juce::jmin (envelope, (float) juce::jlimit (0.0, 1.0, remaining / fadeOutSamples));
             }
 
-            float s = (src[idx] + frac * (src[idx + 1] - src[idx])) * gain * releaseGain * envelope;
+            const float envGain = gain * releaseGain * envelope;
+            const float l = (srcL[idx] + frac * (srcL[idx + 1] - srcL[idx])) * envGain;
+            const float r = (srcR[idx] + frac * (srcR[idx + 1] - srcR[idx])) * envGain;
 
-            for (int ch = 0; ch < output.getNumChannels(); ++ch)
-                output.addSample (ch, startSample + i, s);
+            // Preserve the sample's stereo image: L->ch0, R->ch1. Extra output
+            // channels (rare) get the left channel.
+            const int outCh = output.getNumChannels();
+            if (outCh > 0) output.addSample (0, startSample + i, l);
+            if (outCh > 1) output.addSample (1, startSample + i, r);
+            for (int ch = 2; ch < outCh; ++ch)
+                output.addSample (ch, startSample + i, l);
 
             position += ratio;
             if (releasing)
@@ -123,7 +132,7 @@ private:
     bool   releasing = false;
 };
 
-// Loads an audio file into a sound usable by FableSamplerVoice (mono-mixed).
+// Loads an audio file into a sound usable by FableSamplerVoice (keeps stereo).
 juce::AudioBuffer<float> loadSampleFile (const juce::File& file,
                                          juce::AudioFormatManager& formats,
                                          double& sourceRateOut);

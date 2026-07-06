@@ -29,6 +29,8 @@ private:
     void timerCallback() override;
     void refreshHeader();
     bool isPitchInHighlightedScale (int pitch) const;
+    bool isScaleActive() const;
+    bool isRootPitch (int pitch) const;
 
     std::vector<Note>* currentNotes();
     Pattern* currentPattern() { return context.selectedPattern(); }

@@ -127,12 +127,28 @@ public:
             channelMenu();
             return;
         }
-        handleStepClick (e);
+
+        // FL-style click-drag paint: the first cell decides what the whole
+        // gesture does. Left-click toggles that cell, then dragging paints the
+        // same value across every step it passes; right-click/drag always erases.
+        auto* pattern = context.selectedPattern();
+        if (pattern == nullptr)
+            return;
+        const int stepIndex = stepAt (e.getPosition().x);
+
+        if (e.mods.isRightButtonDown())
+            paintValue = false;
+        else if (stepIndex >= 0 && stepIndex < pattern->lengthSteps)
+            paintValue = ! pattern->dataFor (channelId).steps[(size_t) stepIndex].on;
+        else
+            paintValue = true;
+
+        applyStep (e);
     }
 
-    void mouseDrag (const juce::MouseEvent& e) override { handleStepClick (e); }
+    void mouseDrag (const juce::MouseEvent& e) override { applyStep (e); }
 
-    void handleStepClick (const juce::MouseEvent& e)
+    void applyStep (const juce::MouseEvent& e)
     {
         auto* pattern = context.selectedPattern();
         if (pattern == nullptr)
@@ -143,10 +159,9 @@ public:
             return;
 
         auto& data = pattern->dataFor (channelId);
-        const bool value = ! e.mods.isRightButtonDown();   // right button erases
-        if (data.steps[(size_t) stepIndex].on != value)
+        if (data.steps[(size_t) stepIndex].on != paintValue)
         {
-            data.steps[(size_t) stepIndex].on = value;
+            data.steps[(size_t) stepIndex].on = paintValue;
             context.contentChanged();
             repaint();
         }
@@ -387,6 +402,7 @@ public:
     RightClickButton muteLed { "" };
     RightClickSlider panKnob, volKnob;
     RightClickButton nameButton;
+    bool paintValue = true;   // value the current click-drag gesture paints
     std::unique_ptr<juce::FileChooser> chooser;
 };
 
@@ -410,11 +426,18 @@ public:
         };
         addAndMakeVisible (patternBox);
 
+        addPatternButton.setTooltip ("Add pattern  (right-click: duplicate current)");
         addPatternButton.onClick = [this]
         {
             context.project.addPattern();
             context.selectedPatternIndex = (int) context.project.patterns.size() - 1;
             context.structureChanged();
+        };
+        addPatternButton.onRightClick = [this]
+        {
+            const int newIndex = context.project.duplicatePattern (context.selectedPatternIndex);
+            if (newIndex >= 0)
+                context.selectPattern (newIndex);
         };
         addAndMakeVisible (addPatternButton);
 
@@ -485,7 +508,8 @@ public:
 private:
     AppContext& context;
     ChannelRackPanel& owner;
-    juce::TextButton prevPattern { "<" }, nextPattern { ">" }, addPatternButton { "+" };
+    juce::TextButton prevPattern { "<" }, nextPattern { ">" };
+    RightClickButton addPatternButton { "+" };
     juce::ComboBox patternBox, lengthBox;
     juce::TextButton addChannelButton { "+ Channel" };
 

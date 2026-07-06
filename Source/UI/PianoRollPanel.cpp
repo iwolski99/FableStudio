@@ -57,18 +57,29 @@ public:
         g.fillAll (colours::panelDark);
         const int lengthTicks = gridLengthTicks();
 
-        // row shading + horizontal lines
+        // row shading + horizontal lines. FL-style: the keybed alternates
+        // light/dark, and when a scale is set the OUT-of-scale rows are dimmed
+        // (rather than faintly tinting the in-scale ones) so in-key rows clearly
+        // stand out; the root note's row gets an accent tint.
+        const bool scaleOn = owner.isScaleActive();
         for (int pitch = kLowNote; pitch <= kHighNote; ++pitch)
         {
             const int y = pitchToY (pitch);
             const int semitone = pitch % 12;
             const bool black = semitone == 1 || semitone == 3 || semitone == 6
                             || semitone == 8 || semitone == 10;
-            g.setColour (black ? colours::panelDark.darker (0.25f) : colours::panelDark);
+            g.setColour (black ? colours::panelDark.darker (0.15f)
+                               : colours::panelDark.brighter (0.10f));
             g.fillRect (kKeyWidth, y, getWidth() - kKeyWidth, kNoteHeight);
-            if (owner.isPitchInHighlightedScale (pitch))
+
+            if (scaleOn && ! owner.isPitchInHighlightedScale (pitch))
             {
-                g.setColour (colours::accent.withAlpha (black ? 0.12f : 0.08f));
+                g.setColour (juce::Colours::black.withAlpha (0.34f));   // dim out-of-key rows
+                g.fillRect (kKeyWidth, y, getWidth() - kKeyWidth, kNoteHeight);
+            }
+            if (owner.isRootPitch (pitch))
+            {
+                g.setColour (colours::accent.withAlpha (0.16f));         // mark the key's root
                 g.fillRect (kKeyWidth, y, getWidth() - kKeyWidth, kNoteHeight);
             }
             if (semitone == 0)
@@ -78,14 +89,26 @@ public:
             }
         }
 
-        // vertical grid lines
+        // vertical grid lines: prominent bar lines (2px, high contrast) so bars
+        // are easy to read, medium beat lines, faint step lines.
         for (int tick = 0; tick <= lengthTicks; tick += kTicksPerStep)
         {
             const int x = tickToX (tick);
-            if (tick % kTicksPerBar == 0)        g.setColour (colours::outline.brighter (0.35f));
-            else if (tick % kPPQ == 0)           g.setColour (colours::outline.brighter (0.15f));
-            else                                 g.setColour (colours::outline.withAlpha (0.5f));
-            g.drawVerticalLine (x, 0.0f, (float) getHeight());
+            if (tick % kTicksPerBar == 0)
+            {
+                g.setColour (colours::outline.brighter (0.9f));
+                g.fillRect (x, 0, 2, getHeight());
+            }
+            else if (tick % kPPQ == 0)
+            {
+                g.setColour (colours::outline.brighter (0.2f));
+                g.drawVerticalLine (x, 0.0f, (float) getHeight());
+            }
+            else
+            {
+                g.setColour (colours::outline.withAlpha (0.4f));
+                g.drawVerticalLine (x, 0.0f, (float) getHeight());
+            }
         }
 
         // pattern end marker
@@ -136,6 +159,41 @@ public:
         // handled by the viewport position in PianoRollPanel::paint; here we draw
         // it at x=0 of the grid which scrolls out of view horizontally)
         drawKeyboard (g);
+
+        // bar-number ruler pinned to the top of the visible area
+        drawTopRuler (g);
+    }
+
+    void drawTopRuler (juce::Graphics& g)
+    {
+        const int y0     = owner.viewport.getViewPositionY();
+        const int x0     = owner.viewport.getViewPositionX();
+        const int visW   = owner.viewport.getWidth();
+        const int rulerH = 18;
+
+        g.setColour (colours::titlebar);
+        g.fillRect (x0, y0, visW, rulerH);
+        g.setColour (colours::outline.brighter (0.3f));
+        g.fillRect (x0, y0 + rulerH - 1, visW, 1);
+
+        const int lengthTicks = gridLengthTicks();
+        g.setFont (juce::Font (juce::FontOptions (11.0f, juce::Font::bold)));
+        for (int tick = 0, bar = 1; tick <= lengthTicks; tick += kTicksPerBar, ++bar)
+        {
+            const int x = tickToX (tick);
+            if (x < x0 + kKeyWidth || x > x0 + visW)
+                continue;
+            g.setColour (colours::outline.brighter (0.6f));
+            g.fillRect (x, y0, 1, rulerH);
+            g.setColour (colours::text);
+            g.drawText (juce::String (bar), x + 4, y0, 40, rulerH, juce::Justification::centredLeft);
+        }
+
+        // corner over the keyboard column so bar numbers never bleed under it
+        g.setColour (colours::titlebar.darker (0.25f));
+        g.fillRect (x0, y0, kKeyWidth, rulerH);
+        g.setColour (colours::outline.brighter (0.3f));
+        g.fillRect (x0, y0 + rulerH - 1, kKeyWidth, 1);
     }
 
     void drawKeyboard (juce::Graphics& g)
@@ -862,11 +920,12 @@ void PianoRollPanel::timerCallback()
 {
     if (context.engine.isPlaying())
         grid->repaint();
-    // keep the keyboard column pinned while scrolling
-    static int lastX = -1;
-    if (viewport.getViewPositionX() != lastX)
+    // keep the pinned keyboard column and top bar-ruler in place while scrolling
+    static int lastX = -1, lastY = -1;
+    if (viewport.getViewPositionX() != lastX || viewport.getViewPositionY() != lastY)
     {
         lastX = viewport.getViewPositionX();
+        lastY = viewport.getViewPositionY();
         grid->repaint();
         velocityLane->repaint();
     }
@@ -917,6 +976,19 @@ void PianoRollPanel::resized()
     // start scrolled to C5
     if (viewport.getViewPositionY() == 0)
         viewport.setViewPosition (0, pitchToY (kDefaultRootNote + 12));
+}
+
+bool PianoRollPanel::isScaleActive() const
+{
+    return scaleBox.getSelectedId() > 1;
+}
+
+bool PianoRollPanel::isRootPitch (int pitch) const
+{
+    if (! isScaleActive())
+        return false;
+    const int root = (keyBox.getSelectedId() - 1 + 12) % 12;
+    return (pitch % 12 + 12) % 12 == root;
 }
 
 bool PianoRollPanel::isPitchInHighlightedScale (int pitch) const

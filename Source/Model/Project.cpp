@@ -68,6 +68,17 @@ Pattern& Project::addPattern()
     return patterns.back();
 }
 
+int Project::duplicatePattern (int sourceIndex)
+{
+    if (sourceIndex < 0 || sourceIndex >= (int) patterns.size())
+        return -1;
+
+    Pattern copy = patterns[(size_t) sourceIndex];   // deep-copies steps + notes
+    copy.name = patterns[(size_t) sourceIndex].name + " (copy)";
+    patterns.push_back (std::move (copy));
+    return (int) patterns.size() - 1;
+}
+
 int Project::songLengthTicks() const
 {
     int len = 0;

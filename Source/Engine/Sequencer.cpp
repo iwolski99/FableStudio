@@ -207,6 +207,19 @@ void Sequencer::emitRange (const PlaybackData& data, const Transport& t,
         if (absTick < fromTick || absTick >= toTick)
             return;
         const int offset = juce::jmax (0, (int) ((absTick - blockStartTick) / ticksPerSample));
+
+        // If the same channel+pitch is still ringing (a back-to-back note whose
+        // note-off would otherwise land a sample or two *after* this note-on and
+        // silence it), stop it right here, before retriggering. Emitting the off
+        // before the on at the same sample offset makes adjacent same-pitch notes
+        // articulate cleanly instead of clicking / dropping out.
+        for (auto& o : pendingOffs)
+            if (o.active && o.channelId == e.channelId && o.pitch == e.pitch)
+            {
+                sink.addNoteOff (o.channelId, o.pitch, offset);
+                o.active = false;
+            }
+
         sink.addNoteOn (e.channelId, e.pitch, e.velocity, offset);
         scheduleOff (e.channelId, e.pitch,
                      (absTick - blockStartTick + e.lengthTicks) / ticksPerSample);

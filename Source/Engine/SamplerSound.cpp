@@ -13,19 +13,22 @@ juce::AudioBuffer<float> loadSampleFile (const juce::File& file,
     if (reader == nullptr || reader->lengthInSamples <= 0)
         return {};
 
-    // Cap at 60s to keep memory bounded; long files are for the playlist (future), not the sampler.
+    // Cap at 60s to keep memory bounded.
     const int numSamples = (int) juce::jmin (reader->lengthInSamples, (juce::int64) (reader->sampleRate * 60));
+    const int numSourceChannels = juce::jmax (1, (int) reader->numChannels);
 
-    juce::AudioBuffer<float> multi ((int) reader->numChannels, numSamples);
+    juce::AudioBuffer<float> multi (numSourceChannels, numSamples);
     reader->read (&multi, 0, numSamples, 0, true, true);
 
-    juce::AudioBuffer<float> mono (1, numSamples);
-    mono.clear();
-    for (int ch = 0; ch < multi.getNumChannels(); ++ch)
-        mono.addFrom (0, 0, multi, ch, 0, numSamples, 1.0f / (float) multi.getNumChannels());
+    // Preserve stereo (up to 2 channels) so samples keep their stereo image.
+    const int outChannels = numSourceChannels >= 2 ? 2 : 1;
+    juce::AudioBuffer<float> out (outChannels, numSamples);
+    out.clear();
+    for (int ch = 0; ch < outChannels; ++ch)
+        out.copyFrom (ch, 0, multi, ch, 0, numSamples);
 
     sourceRateOut = reader->sampleRate;
-    return mono;
+    return out;
 }
 
 juce::AudioBuffer<float> loadAudioClipFile (const juce::File& file,

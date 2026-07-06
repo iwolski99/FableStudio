@@ -13,6 +13,36 @@
 namespace fable
 {
 
+// Feeds tempo/position to hosted plugins so their host-synced features (LFOs,
+// arpeggiators, tempo-synced delays in Serum etc.) follow the project BPM.
+class HostPlayHead : public juce::AudioPlayHead
+{
+public:
+    void update (double bpmIn, double ppqIn, juce::int64 samplesIn, bool playingIn) noexcept
+    {
+        bpm.store (bpmIn);
+        ppq.store (ppqIn);
+        timeSamples.store (samplesIn);
+        playing.store (playingIn);
+    }
+
+    juce::Optional<PositionInfo> getPosition() const override
+    {
+        PositionInfo info;
+        info.setBpm (bpm.load());
+        info.setPpqPosition (ppq.load());
+        info.setTimeInSamples (timeSamples.load());
+        info.setIsPlaying (playing.load());
+        info.setTimeSignature (TimeSignature { 4, 4 });
+        return info;
+    }
+
+private:
+    std::atomic<double> bpm { 140.0 }, ppq { 0.0 };
+    std::atomic<juce::int64> timeSamples { 0 };
+    std::atomic<bool> playing { false };
+};
+
 // ---------------------------------------------------------------------------
 // AudioEngine drives everything audible.
 //
@@ -126,6 +156,9 @@ private:
     double currentSampleRate = 44100.0;
     int    currentBlockSize  = 512;
     bool   deviceRunning     = false;
+
+    HostPlayHead   playHead;               // shared by every hosted plugin
+    juce::int64    playheadSampleCounter = 0;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AudioEngine)
 };

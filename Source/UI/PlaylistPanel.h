@@ -45,6 +45,7 @@ private:
     void setTool (Tool t);
     void refreshToolButtons();
     void renameSelectedPattern();
+    void showPatternMenu();
 
     AppContext& context;
     juce::Label hintLabel;

@@ -50,6 +50,7 @@ private:
     void addFolderClicked();
     void removeCurrentFolderClicked();
     void setRoot (int rootIndex);
+    void stopPreview();
 
     AppContext& context;
     juce::Label pluginsHeader { {}, "PLUGINS" }, samplesHeader { {}, "FILES" };
@@ -71,6 +72,7 @@ private:
     juce::AudioTransportSource previewTransport;
     juce::AudioSourcePlayer previewPlayer;
     std::unique_ptr<juce::AudioFormatReaderSource> previewReaderSource;
+    juce::String previewFilePath;   // currently-auditioned file (empty = none)
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (BrowserPanel)
 };

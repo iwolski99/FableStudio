@@ -172,6 +172,9 @@ struct Project
     void removeChannel (int id);
 
     Pattern& addPattern();
+    // Deep-copies pattern at sourceIndex (steps + notes) as a new pattern at the
+    // end; returns the new pattern's index, or -1 if sourceIndex is invalid.
+    int      duplicatePattern (int sourceIndex);
     int      songLengthTicks() const;
 };
 
